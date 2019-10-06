@@ -145,6 +145,16 @@ void get_constant(int16_t* data, int length, int16_t constant) {
   }
 }
 
+void update_led(uint8_t mask) {
+  for (int ii = 0; ii < 4; ii++) {
+    if ((mask >> ii) & 0x1) {
+      bsp_board_led_on(ii);
+    } else {
+      bsp_board_led_off(ii);
+    }
+  }
+}
+
 /**
  * @brief Handler for timer events.
  */
@@ -273,6 +283,10 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
         ecg_control = *((uint32_t*)p_evt->params.rx_data.p_data);
 //        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
         ble_ecg_control_set(&m_nus, m_conn_handle, ecg_control);
+      
+        // Updates LEDs
+        update_led( (ecg_control >> 3) & 0xf);
+
         NRF_LOG_DEBUG("ecg_control: %d", ecg_control);
 
     }
