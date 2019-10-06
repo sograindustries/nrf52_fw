@@ -56,7 +56,7 @@ NRF_LOG_MODULE_REGISTER();
 
 #define BLE_UUID_ECG_STATUS_CHARACTERISTIC 0x0004           /**< The UUID of the Status Characteristic. */
 #define BLE_UUID_NUS_TX_CHARACTERISTIC 0x0003               /**< The UUID of the TX Characteristic. */
-#define BLE_UUID_NUS_RX_CHARACTERISTIC 0x0002               /**< The UUID of the RX Characteristic. */
+#define BLE_UUID_ECG_CONTROL_CHARACTERISTIC 0x0002               /**< The UUID of the RX Characteristic. */
 
 #define BLE_NUS_MAX_RX_CHAR_LEN        BLE_NUS_MAX_DATA_LEN /**< Maximum length of the RX Characteristic (in bytes). */
 #define BLE_NUS_MAX_TX_CHAR_LEN        BLE_NUS_MAX_DATA_LEN /**< Maximum length of the TX Characteristic (in bytes). */
@@ -151,11 +151,13 @@ static void on_write(ble_nus_t * p_nus, ble_evt_t const * p_ble_evt)
             {
                 p_client->is_notification_enabled = true;
                 evt.type                          = BLE_NUS_EVT_COMM_STARTED;
+                NRF_LOG_DEBUG("Notification Enabled");
             }
             else
             {
                 p_client->is_notification_enabled = false;
                 evt.type                          = BLE_NUS_EVT_COMM_STOPPED;
+                NRF_LOG_DEBUG("Notification Disabled");
             }
 
             if (p_nus->data_handler != NULL)
@@ -201,7 +203,7 @@ static void on_hvx_tx_complete(ble_nus_t * p_nus, ble_evt_t const * p_ble_evt)
                       p_ble_evt->evt.gatts_evt.conn_handle);
         return;
     }
-
+    
     if (p_client->is_notification_enabled)
     {
         memset(&evt, 0, sizeof(ble_nus_evt_t));
@@ -248,7 +250,7 @@ void ble_nus_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
 }
 
 
-uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init)
+uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint32_t control)
 {
     ret_code_t            err_code;
     ble_uuid_t            ble_uuid;
@@ -300,8 +302,9 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init)
 
     // Add the RX Characteristic.
     memset(&add_char_params, 0, sizeof(add_char_params));
-    add_char_params.uuid                     = BLE_UUID_NUS_RX_CHARACTERISTIC;
+    add_char_params.uuid                     = BLE_UUID_ECG_CONTROL_CHARACTERISTIC;
     add_char_params.uuid_type                = p_nus->uuid_type;
+    add_char_params.p_init_value             = (uint8_t*)&control;
     add_char_params.max_len                  = sizeof(uint32_t);
     add_char_params.init_len                 = sizeof(uint32_t);
     add_char_params.is_var_len               = false;
@@ -387,7 +390,22 @@ uint32_t ble_ecg_status_set(ble_nus_t * p_nus, uint16_t    conn_handle, uint32_t
     gatts_value.offset  = 0;
     gatts_value.p_value = (uint8_t*)&status;
 
-    NRF_LOG_DEBUG("Setting value with conn: %d", conn_handle);
+//    NRF_LOG_DEBUG("Setting value with conn: %d", conn_handle);
+    return sd_ble_gatts_value_set(conn_handle, p_nus->status_handles.value_handle, &gatts_value);
+}
+
+uint32_t ble_ecg_control_set(ble_nus_t * p_nus, uint16_t conn_handle, uint32_t control)
+{
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = sizeof(uint32_t);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = (uint8_t*)&control;
+
+//    NRF_LOG_DEBUG("Setting value with conn: %d", conn_handle);
     return sd_ble_gatts_value_set(conn_handle, p_nus->status_handles.value_handle, &gatts_value);
 }
 

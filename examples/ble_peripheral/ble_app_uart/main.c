@@ -105,12 +105,14 @@
 #define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
 
+extern const int16_t mock_data[1024];
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                             /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                                 /**< Advertising module instance. */
 
+static uint32_t   ecg_control            = 0;
 static uint16_t   m_conn_handle          = BLE_CONN_HANDLE_INVALID;                 /**< Handle of the current connection. */
 static uint16_t   m_ble_nus_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - 3;            /**< Maximum length of data (in bytes) that can be transmitted to the peer by the Nordic UART service module. */
 static ble_uuid_t m_adv_uuids[]          =                                          /**< Universally unique service identifier. */
@@ -121,22 +123,58 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 
 const nrf_drv_timer_t TIMER_LED = NRF_DRV_TIMER_INSTANCE(1);
 
+void get_mock_adc(int16_t* data, int length) {
+  static int offset = 0;
+  for (int ii = 0; ii < length; ii++) {
+    data[ii] = mock_data[offset];
+    offset++;
+    offset %= 1024;
+  }
+}
+
+void get_ramp(int16_t* data, int length) {
+  static int16_t value = 0;
+  for(int ii = 0; ii < length; ii++) {
+    data[ii] = value++;
+  }
+}
+
+void get_constant(int16_t* data, int length, int16_t constant) {
+  for(int ii = 0; ii < length; ii++) {
+    data[ii] = constant;
+  }
+}
+
 /**
  * @brief Handler for timer events.
  */
 void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 {
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
+    const uint16_t data_length = 60;
     static uint8_t index = 10;
     uint32_t           err_code;
   static int timer_count = 0;
     switch (event_type)
     {
         case NRF_TIMER_EVENT_COMPARE1:
-//            NRF_LOG_DEBUG("Timer Event: %d", timer_count);
-//            NRF_LOG_DEBUG("mconn: %d", m_conn_handle);
             timer_count++;
             ble_ecg_status_set(&m_nus, m_conn_handle, timer_count);
+
+            if (ecg_control & 0x1) {
+              switch ((ecg_control >> 1) & 0x3) {
+                case 0:
+                  get_ramp((int16_t*) data_array, data_length/2);
+                  break;
+                case 1:
+                  get_mock_adc((int16_t*) data_array, data_length/2);
+                  break;
+                default:
+                  get_constant((int16_t*) data_array, data_length/2, 1);
+                  break;
+              }
+              ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
+            }
         default:
             //Do nothing.
             break;
@@ -227,25 +265,16 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
     {
         uint32_t err_code;
 
-        NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
-        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
+        NRF_LOG_DEBUG("Received data from BLE NUS.");
+        NRF_LOG_DEBUG("Data Size: %d", p_evt->params.rx_data.length);
+        if( p_evt->params.rx_data.length != 4)
+          return;
 
-        for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++)
-        {
-            do
-            {
-                err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);
-                if ((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
-                {
-                    NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
-                    APP_ERROR_CHECK(err_code);
-                }
-            } while (err_code == NRF_ERROR_BUSY);
-        }
-        if (p_evt->params.rx_data.p_data[p_evt->params.rx_data.length - 1] == '\r')
-        {
-            while (app_uart_put('\n') == NRF_ERROR_BUSY);
-        }
+        ecg_control = *((uint32_t*)p_evt->params.rx_data.p_data);
+//        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
+        ble_ecg_control_set(&m_nus, m_conn_handle, ecg_control);
+        NRF_LOG_DEBUG("ecg_control: %d", ecg_control);
+
     }
 
 }
@@ -271,7 +300,7 @@ static void services_init(void)
 
     nus_init.data_handler = nus_data_handler;
 
-    err_code = ble_nus_init(&m_nus, &nus_init);
+    err_code = ble_nus_init(&m_nus, &nus_init, ecg_control);
     APP_ERROR_CHECK(err_code);
 }
 
