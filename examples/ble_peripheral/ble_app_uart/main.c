@@ -105,7 +105,10 @@
 #define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
 
-extern const int16_t mock_data[1024];
+#define NORMAL_ADC_SAMPLES 7000
+#define ABNORMAL_ADC_SAMPLES 6260
+extern const int16_t mock_normal_data[NORMAL_ADC_SAMPLES];
+extern const int16_t mock_abnormal_data[ABNORMAL_ADC_SAMPLES];
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
@@ -123,12 +126,21 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 
 const nrf_drv_timer_t TIMER_LED = NRF_DRV_TIMER_INSTANCE(1);
 
-void get_mock_adc(int16_t* data, int length) {
+void get_mock_normal_adc(int16_t* data, int length) {
   static int offset = 0;
   for (int ii = 0; ii < length; ii++) {
-    data[ii] = mock_data[offset];
+    data[ii] = mock_normal_data[offset];
     offset++;
-    offset %= 1024;
+    offset %= NORMAL_ADC_SAMPLES;
+  }
+}
+
+void get_mock_abnormal_adc(int16_t* data, int length) {
+  static int offset = 0;
+  for (int ii = 0; ii < length; ii++) {
+    data[ii] = mock_abnormal_data[offset];
+    offset++;
+    offset %= ABNORMAL_ADC_SAMPLES;
   }
 }
 
@@ -177,10 +189,15 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
                   get_ramp((int16_t*) data_array, data_length/2);
                   break;
                 case 1:
-                  get_mock_adc((int16_t*) data_array, data_length/2);
+                  get_mock_normal_adc((int16_t*) data_array, data_length/2);
+                  break;
+                case 2:
+                  get_mock_abnormal_adc((int16_t*) data_array, data_length/2);
+                  break;
+                case 3:
+                  get_constant((int16_t*) data_array, data_length/2, 1);
                   break;
                 default:
-                  get_constant((int16_t*) data_array, data_length/2, 1);
                   break;
               }
               ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
