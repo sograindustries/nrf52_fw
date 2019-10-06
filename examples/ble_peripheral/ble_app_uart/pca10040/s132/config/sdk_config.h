@@ -457,7 +457,7 @@
 // <e> BLE_NUS_CONFIG_LOG_ENABLED - Enables logging in the module.
 //==========================================================
 #ifndef BLE_NUS_CONFIG_LOG_ENABLED
-#define BLE_NUS_CONFIG_LOG_ENABLED 0
+#define BLE_NUS_CONFIG_LOG_ENABLED 1
 #endif
 // <o> BLE_NUS_CONFIG_LOG_LEVEL  - Default Severity level
  
@@ -468,7 +468,7 @@
 // <4=> Debug 
 
 #ifndef BLE_NUS_CONFIG_LOG_LEVEL
-#define BLE_NUS_CONFIG_LOG_LEVEL 3
+#define BLE_NUS_CONFIG_LOG_LEVEL 4
 #endif
 
 // <o> BLE_NUS_CONFIG_INFO_COLOR  - ANSI escape code prefix.
@@ -3735,7 +3735,7 @@
 // <e> NRFX_TIMER_ENABLED - nrfx_timer - TIMER periperal driver
 //==========================================================
 #ifndef NRFX_TIMER_ENABLED
-#define NRFX_TIMER_ENABLED 0
+#define NRFX_TIMER_ENABLED 1
 #endif
 // <q> NRFX_TIMER0_ENABLED  - Enable TIMER0 instance
  
@@ -5446,7 +5446,7 @@
 // <e> TIMER_ENABLED - nrf_drv_timer - TIMER periperal driver - legacy layer
 //==========================================================
 #ifndef TIMER_ENABLED
-#define TIMER_ENABLED 0
+#define TIMER_ENABLED 1
 #endif
 // <o> TIMER_DEFAULT_CONFIG_FREQUENCY  - Timer frequency if in Timer mode
  
@@ -5513,7 +5513,7 @@
  
 
 #ifndef TIMER1_ENABLED
-#define TIMER1_ENABLED 0
+#define TIMER1_ENABLED 1
 #endif
 
 // <q> TIMER2_ENABLED  - Enable TIMER2 instance
@@ -7566,7 +7566,7 @@
 // <4=> Debug 
 
 #ifndef NRF_LOG_DEFAULT_LEVEL
-#define NRF_LOG_DEFAULT_LEVEL 3
+#define NRF_LOG_DEFAULT_LEVEL 4
 #endif
 
 // <q> NRF_LOG_DEFERRED  - Enable deffered logger.

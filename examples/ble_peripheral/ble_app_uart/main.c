@@ -60,10 +60,11 @@
 #include "nrf_sdh.h"
 #include "nrf_sdh_soc.h"
 #include "nrf_sdh_ble.h"
+#include "nrf_drv_timer.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
 #include "app_timer.h"
-#include "ble_nus.h"
+#include "ble_ecg.h"
 #include "app_uart.h"
 #include "app_util_platform.h"
 #include "bsp_btn_ble.h"
@@ -82,7 +83,7 @@
 
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
-#define DEVICE_NAME                     "Nordic_UART"                               /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "ARGOS_ECG"                               /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -116,6 +117,32 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 {
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
+
+
+const nrf_drv_timer_t TIMER_LED = NRF_DRV_TIMER_INSTANCE(1);
+
+/**
+ * @brief Handler for timer events.
+ */
+void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
+{
+    static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
+    static uint8_t index = 10;
+    uint32_t           err_code;
+  static int timer_count = 0;
+    switch (event_type)
+    {
+        case NRF_TIMER_EVENT_COMPARE1:
+//            NRF_LOG_DEBUG("Timer Event: %d", timer_count);
+//            NRF_LOG_DEBUG("mconn: %d", m_conn_handle);
+            timer_count++;
+            ble_ecg_status_set(&m_nus, m_conn_handle, timer_count);
+        default:
+            //Do nothing.
+            break;
+    }
+}
+
 
 
 /**@brief Function for assert macro callback.
@@ -697,6 +724,9 @@ static void advertising_start(void)
 int main(void)
 {
     bool erase_bonds;
+    uint32_t time_ms = 100; //Time(in miliseconds) between consecutive compare events.
+    uint32_t time_ticks;
+    uint32_t err_code = NRF_SUCCESS;
 
     // Initialize.
     uart_init();
@@ -710,6 +740,20 @@ int main(void)
     services_init();
     advertising_init();
     conn_params_init();
+
+   //Configure TIMER_LED for generating simple light effect - leds on board will invert his state one after the other.
+    nrf_drv_timer_config_t timer_cfg = NRF_DRV_TIMER_DEFAULT_CONFIG;
+    timer_cfg.frequency = NRF_TIMER_FREQ_31250Hz;
+    err_code = nrf_drv_timer_init(&TIMER_LED, &timer_cfg, timer_event_handler);
+    APP_ERROR_CHECK(err_code);
+
+    time_ticks = nrf_drv_timer_ms_to_ticks(&TIMER_LED, time_ms);
+    NRF_LOG_INFO("Timer Configured!");
+
+    nrf_drv_timer_extended_compare(
+         &TIMER_LED, NRF_TIMER_CC_CHANNEL1, time_ticks, NRF_TIMER_SHORT_COMPARE1_CLEAR_MASK, true);
+
+    nrf_drv_timer_enable(&TIMER_LED);
 
     // Start execution.
     printf("\r\nUART started.\r\n");

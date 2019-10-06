@@ -40,7 +40,7 @@
 #include "sdk_common.h"
 #if NRF_MODULE_ENABLED(BLE_NUS)
 #include "ble.h"
-#include "ble_nus.h"
+#include "ble_ecg.h"
 #include "ble_srv_common.h"
 
 #define NRF_LOG_MODULE_NAME ble_nus
@@ -54,15 +54,15 @@
 #include "nrf_log.h"
 NRF_LOG_MODULE_REGISTER();
 
-
+#define BLE_UUID_ECG_STATUS_CHARACTERISTIC 0x0004           /**< The UUID of the Status Characteristic. */
 #define BLE_UUID_NUS_TX_CHARACTERISTIC 0x0003               /**< The UUID of the TX Characteristic. */
 #define BLE_UUID_NUS_RX_CHARACTERISTIC 0x0002               /**< The UUID of the RX Characteristic. */
 
 #define BLE_NUS_MAX_RX_CHAR_LEN        BLE_NUS_MAX_DATA_LEN /**< Maximum length of the RX Characteristic (in bytes). */
 #define BLE_NUS_MAX_TX_CHAR_LEN        BLE_NUS_MAX_DATA_LEN /**< Maximum length of the TX Characteristic (in bytes). */
 
-#define NUS_BASE_UUID                  {{0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0, 0x93, 0xF3, 0xA3, 0xB5, 0x00, 0x00, 0x40, 0x6E}} /**< Used vendor specific UUID. */
-
+//#define NUS_BASE_UUID                  {{0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0, 0x93, 0xF3, 0xA3, 0xB5, 0x00, 0x00, 0x40, 0x6E}} /**< Used vendor specific UUID. */
+#define NUS_BASE_UUID                  {{0xb6, 0x7d, 0xbc, 0xd4, 0x85, 0x71, 0xa1, 0xe9, 0x81, 0xb4, 0x2a, 0x2a, 0x00, 0x00, 0xcc, 0xe4}}
 
 /**@brief Function for handling the @ref BLE_GAP_EVT_CONNECTED event from the SoftDevice.
  *
@@ -191,7 +191,7 @@ static void on_hvx_tx_complete(ble_nus_t * p_nus, ble_evt_t const * p_ble_evt)
     ret_code_t                 err_code;
     ble_nus_evt_t              evt;
     ble_nus_client_context_t * p_client;
-
+    NRF_LOG_DEBUG("on_hvx_tx_complete");
     err_code = blcm_link_ctx_get(p_nus->p_link_ctx_storage,
                                  p_ble_evt->evt.gatts_evt.conn_handle,
                                  (void *) &p_client);
@@ -223,18 +223,21 @@ void ble_nus_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
     }
 
     ble_nus_t * p_nus = (ble_nus_t *)p_context;
-
+    NRF_LOG_DEBUG("event");
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
+            NRF_LOG_DEBUG("evt_connected");
             on_connect(p_nus, p_ble_evt);
             break;
 
         case BLE_GATTS_EVT_WRITE:
+            NRF_LOG_DEBUG("evt_write");
             on_write(p_nus, p_ble_evt);
             break;
 
         case BLE_GATTS_EVT_HVN_TX_COMPLETE:
+            NRF_LOG_DEBUG("evt_hvn_tx_complete");
             on_hvx_tx_complete(p_nus, p_ble_evt);
             break;
 
@@ -273,13 +276,36 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init)
     /**@snippet [Adding proprietary Service to the SoftDevice] */
     VERIFY_SUCCESS(err_code);
 
+    // Add the Status Characteristic.
+    uint32_t init_value = 0;
+    memset(&add_char_params, 0, sizeof(add_char_params));
+    add_char_params.uuid                     = BLE_UUID_ECG_STATUS_CHARACTERISTIC;
+    add_char_params.uuid_type                = p_nus->uuid_type;
+    add_char_params.p_init_value             = (uint8_t*)&init_value;
+    add_char_params.max_len                  = sizeof(uint32_t);
+    add_char_params.init_len                 = sizeof(uint32_t);
+    add_char_params.is_var_len               = false;
+    add_char_params.char_props.read          = 1;
+    add_char_params.char_props.write         = 0;
+    add_char_params.char_props.write_wo_resp = 0;
+
+    add_char_params.read_access  = SEC_OPEN;
+    add_char_params.write_access = SEC_OPEN;
+
+    err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->status_handles);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
     // Add the RX Characteristic.
     memset(&add_char_params, 0, sizeof(add_char_params));
     add_char_params.uuid                     = BLE_UUID_NUS_RX_CHARACTERISTIC;
     add_char_params.uuid_type                = p_nus->uuid_type;
-    add_char_params.max_len                  = BLE_NUS_MAX_RX_CHAR_LEN;
-    add_char_params.init_len                 = sizeof(uint8_t);
-    add_char_params.is_var_len               = true;
+    add_char_params.max_len                  = sizeof(uint32_t);
+    add_char_params.init_len                 = sizeof(uint32_t);
+    add_char_params.is_var_len               = false;
+    add_char_params.char_props.read          = 1;
     add_char_params.char_props.write         = 1;
     add_char_params.char_props.write_wo_resp = 1;
 
@@ -350,5 +376,19 @@ uint32_t ble_nus_data_send(ble_nus_t * p_nus,
     return sd_ble_gatts_hvx(conn_handle, &hvx_params);
 }
 
+uint32_t ble_ecg_status_set(ble_nus_t * p_nus, uint16_t    conn_handle, uint32_t status)
+{
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = sizeof(uint32_t);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = (uint8_t*)&status;
+
+    NRF_LOG_DEBUG("Setting value with conn: %d", conn_handle);
+    return sd_ble_gatts_value_set(conn_handle, p_nus->status_handles.value_handle, &gatts_value);
+}
 
 #endif // NRF_MODULE_ENABLED(BLE_NUS)
