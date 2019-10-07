@@ -54,9 +54,10 @@
 #include "nrf_log.h"
 NRF_LOG_MODULE_REGISTER();
 
-#define BLE_UUID_ECG_STATUS_CHARACTERISTIC 0x0004           /**< The UUID of the Status Characteristic. */
-#define BLE_UUID_NUS_TX_CHARACTERISTIC 0x0003               /**< The UUID of the TX Characteristic. */
-#define BLE_UUID_ECG_CONTROL_CHARACTERISTIC 0x0002               /**< The UUID of the RX Characteristic. */
+#define BLE_UUID_ECG_STATUS_CHARACTERISTIC        0x0002  
+#define BLE_UUID_ECG_CONTROL_CHARACTERISTIC       0x0003      
+#define BLE_UUID_ECG_DATA_CHARACTERISTIC          0x0004     
+#define BLE_UUID_ECG_ARRHYTHMIA_CHARACTERISTIC    0x0005     
 
 #define BLE_NUS_MAX_RX_CHAR_LEN        BLE_NUS_MAX_DATA_LEN /**< Maximum length of the RX Characteristic (in bytes). */
 #define BLE_NUS_MAX_TX_CHAR_LEN        BLE_NUS_MAX_DATA_LEN /**< Maximum length of the TX Characteristic (in bytes). */
@@ -151,13 +152,38 @@ static void on_write(ble_nus_t * p_nus, ble_evt_t const * p_ble_evt)
             {
                 p_client->is_notification_enabled = true;
                 evt.type                          = BLE_NUS_EVT_COMM_STARTED;
-                NRF_LOG_DEBUG("Notification Enabled");
+                NRF_LOG_DEBUG("Stream Notification Enabled");
             }
             else
             {
                 p_client->is_notification_enabled = false;
                 evt.type                          = BLE_NUS_EVT_COMM_STOPPED;
-                NRF_LOG_DEBUG("Notification Disabled");
+                NRF_LOG_DEBUG("Stream Notification Disabled");
+            }
+
+            if (p_nus->data_handler != NULL)
+            {
+                p_nus->data_handler(&evt);
+            }
+
+        }
+    }
+    else if ((p_evt_write->handle == p_nus->arrhythmia_handles.cccd_handle) &&
+        (p_evt_write->len == 2))
+    {
+        if (p_client != NULL)
+        {
+            if (ble_srv_is_notification_enabled(p_evt_write->data))
+            {
+                p_client->arrhythmia_notification_enabled = true;
+                evt.type                          = BLE_NUS_EVT_COMM_STARTED;
+                NRF_LOG_DEBUG("Arrhythmia Notification Enabled");
+            }
+            else
+            {
+                p_client->arrhythmia_notification_enabled = false;
+                evt.type                                = BLE_NUS_EVT_COMM_STOPPED;
+                NRF_LOG_DEBUG("Arrhythmia Notification Disabled");
             }
 
             if (p_nus->data_handler != NULL)
@@ -203,7 +229,7 @@ static void on_hvx_tx_complete(ble_nus_t * p_nus, ble_evt_t const * p_ble_evt)
                       p_ble_evt->evt.gatts_evt.conn_handle);
         return;
     }
-    
+    /*
     if (p_client->is_notification_enabled)
     {
         memset(&evt, 0, sizeof(ble_nus_evt_t));
@@ -214,6 +240,7 @@ static void on_hvx_tx_complete(ble_nus_t * p_nus, ble_evt_t const * p_ble_evt)
 
         p_nus->data_handler(&evt);
     }
+    */
 }
 
 
@@ -300,7 +327,7 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint
         return err_code;
     }
 
-    // Add the RX Characteristic.
+    // Add the Control Characteristic.
     memset(&add_char_params, 0, sizeof(add_char_params));
     add_char_params.uuid                     = BLE_UUID_ECG_CONTROL_CHARACTERISTIC;
     add_char_params.uuid_type                = p_nus->uuid_type;
@@ -324,7 +351,7 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint
     // Add the TX Characteristic.
     /**@snippet [Adding proprietary characteristic to the SoftDevice] */
     memset(&add_char_params, 0, sizeof(add_char_params));
-    add_char_params.uuid              = BLE_UUID_NUS_TX_CHARACTERISTIC;
+    add_char_params.uuid              = BLE_UUID_ECG_DATA_CHARACTERISTIC;
     add_char_params.uuid_type         = p_nus->uuid_type;
     add_char_params.max_len           = BLE_NUS_MAX_TX_CHAR_LEN;
     add_char_params.init_len          = sizeof(uint8_t);
@@ -335,8 +362,68 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint
     add_char_params.write_access      = SEC_OPEN;
     add_char_params.cccd_write_access = SEC_OPEN;
 
-    return characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->tx_handles);
+    err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->tx_handles);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    // Add the Arrhythmia Characteristic.
     /**@snippet [Adding proprietary characteristic to the SoftDevice] */
+    memset(&add_char_params, 0, sizeof(add_char_params));
+    add_char_params.uuid              = BLE_UUID_ECG_ARRHYTHMIA_CHARACTERISTIC;
+    add_char_params.uuid_type         = p_nus->uuid_type;
+    add_char_params.max_len           = BLE_NUS_MAX_TX_CHAR_LEN;
+    add_char_params.init_len          = sizeof(uint8_t);
+    add_char_params.is_var_len        = true;
+    add_char_params.char_props.notify = 1;
+
+    add_char_params.read_access       = SEC_OPEN;
+    add_char_params.write_access      = SEC_OPEN;
+    add_char_params.cccd_write_access = SEC_OPEN;
+
+    return characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->arrhythmia_handles);
+    /**@snippet [Adding proprietary characteristic to the SoftDevice] */
+}
+
+uint32_t ble_ecg_arrhythmia_send(ble_nus_t * p_nus,
+                                 uint8_t   * p_data,
+                                 uint16_t  * p_length,
+                                 uint16_t    conn_handle)
+{
+    ret_code_t                 err_code;
+    ble_gatts_hvx_params_t     hvx_params;
+    ble_nus_client_context_t * p_client;
+
+    VERIFY_PARAM_NOT_NULL(p_nus);
+
+    err_code = blcm_link_ctx_get(p_nus->p_link_ctx_storage, conn_handle, (void *) &p_client);
+    VERIFY_SUCCESS(err_code);
+
+    if ((conn_handle == BLE_CONN_HANDLE_INVALID) || (p_client == NULL))
+    {
+        return NRF_ERROR_NOT_FOUND;
+    }
+
+    if (!p_client->arrhythmia_notification_enabled)
+    {
+        NRF_LOG_DEBUG("Notification disabled!");
+        return NRF_ERROR_INVALID_STATE;
+    }
+
+    if (*p_length > BLE_NUS_MAX_DATA_LEN)
+    {
+        return NRF_ERROR_INVALID_PARAM;
+    }
+
+    memset(&hvx_params, 0, sizeof(hvx_params));
+
+    hvx_params.handle = p_nus->arrhythmia_handles.value_handle;
+    hvx_params.p_data = p_data;
+    hvx_params.p_len  = p_length;
+    hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+
+    return sd_ble_gatts_hvx(conn_handle, &hvx_params);
 }
 
 

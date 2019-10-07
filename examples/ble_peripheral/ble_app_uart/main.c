@@ -176,7 +176,11 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
     const uint16_t data_length = 60;
     static uint8_t index = 10;
     uint32_t           err_code;
-  static int timer_count = 0;
+    static uint32_t timer_count = 0;
+    int timer_count_size = sizeof(timer_count);
+
+    ble_arrhythmia_s ble_arrhythmia;
+    int16_t ble_arrhythmia_size = sizeof(ble_arrhythmia);
     switch (event_type)
     {
         case NRF_TIMER_EVENT_COMPARE1:
@@ -202,6 +206,16 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
               }
               ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
             }
+
+            if (((timer_count % 50) == 0) && ((ecg_control >> 7) & 0x1)) {
+              NRF_LOG_DEBUG("Arrhythmia!");
+              ble_arrhythmia.timestamp = timer_count;
+              ble_arrhythmia.arrythmia = 3;
+              NRF_LOG_DEBUG("Size: %d", sizeof(ble_arrhythmia));
+              ble_ecg_arrhythmia_send(&m_nus, &ble_arrhythmia, &ble_arrhythmia_size, m_conn_handle);
+            }
+
+            break;
         default:
             //Do nothing.
             break;
