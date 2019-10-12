@@ -177,6 +177,7 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
     static uint8_t index = 10;
     uint32_t           err_code;
     static uint32_t timer_count = 0;
+    uint32_t status = 0;
     int timer_count_size = sizeof(timer_count);
 
     ble_arrhythmia_s ble_arrhythmia;
@@ -185,7 +186,10 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
     {
         case NRF_TIMER_EVENT_COMPARE1:
             timer_count++;
-            ble_ecg_status_set(&m_nus, m_conn_handle, timer_count);
+            ble_ecg_uptime_set(&m_nus, m_conn_handle, timer_count);
+
+            status = 255 - ((timer_count >> 5) % 256);
+            ble_ecg_status_set(&m_nus, m_conn_handle, status);
 
             if (ecg_control & 0x1) {
               switch ((ecg_control >> 1) & 0x3) {

@@ -54,10 +54,14 @@
 #include "nrf_log.h"
 NRF_LOG_MODULE_REGISTER();
 
-#define BLE_UUID_ECG_STATUS_CHARACTERISTIC        0x0002  
-#define BLE_UUID_ECG_CONTROL_CHARACTERISTIC       0x0003      
-#define BLE_UUID_ECG_DATA_CHARACTERISTIC          0x0004     
-#define BLE_UUID_ECG_ARRHYTHMIA_CHARACTERISTIC    0x0005     
+#define FW_VERSION                                0x0102;
+#define BLE_UUID_ECG_UPTIME_CHARACTERISTIC        0x0002  
+#define BLE_UUID_ECG_CONTROL_CHARACTERISTIC       0x0003
+#define BLE_UUID_ECG_VERSION_CHARACTERISTIC       0x0004
+#define BLE_UUID_ECG_ID_CHARACTERISTIC            0x0005
+#define BLE_UUID_ECG_STATUS_CHARACTERISTIC        0x0006      
+#define BLE_UUID_ECG_DATA_CHARACTERISTIC          0x0020     
+#define BLE_UUID_ECG_ARRHYTHMIA_CHARACTERISTIC    0x0021     
 
 #define BLE_NUS_MAX_RX_CHAR_LEN        BLE_NUS_MAX_DATA_LEN /**< Maximum length of the RX Characteristic (in bytes). */
 #define BLE_NUS_MAX_TX_CHAR_LEN        BLE_NUS_MAX_DATA_LEN /**< Maximum length of the TX Characteristic (in bytes). */
@@ -305,12 +309,75 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint
     /**@snippet [Adding proprietary Service to the SoftDevice] */
     VERIFY_SUCCESS(err_code);
 
-    // Add the Status Characteristic.
+    // Add the  Characteristic.
     uint32_t init_value = 0;
+    memset(&add_char_params, 0, sizeof(add_char_params));
+    add_char_params.uuid                     = BLE_UUID_ECG_UPTIME_CHARACTERISTIC;
+    add_char_params.uuid_type                = p_nus->uuid_type;
+    add_char_params.p_init_value             = (uint8_t*)&init_value;
+    add_char_params.max_len                  = sizeof(uint32_t);
+    add_char_params.init_len                 = sizeof(uint32_t);
+    add_char_params.is_var_len               = false;
+    add_char_params.char_props.read          = 1;
+    add_char_params.char_props.write         = 0;
+    add_char_params.char_props.write_wo_resp = 0;
+
+    add_char_params.read_access  = SEC_OPEN;
+    add_char_params.write_access = SEC_OPEN;
+
+    err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->uptime_handles);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    uint32_t id = 0x12345678;
+    memset(&add_char_params, 0, sizeof(add_char_params)); 
+    add_char_params.uuid                     = BLE_UUID_ECG_ID_CHARACTERISTIC;
+    add_char_params.uuid_type                = p_nus->uuid_type;
+    add_char_params.p_init_value             = (uint8_t*)&id;
+    add_char_params.max_len                  = sizeof(uint32_t);
+    add_char_params.init_len                 = sizeof(uint32_t);
+    add_char_params.is_var_len               = false;
+    add_char_params.char_props.read          = 1;
+    add_char_params.char_props.write         = 0;
+    add_char_params.char_props.write_wo_resp = 0;
+
+    add_char_params.read_access  = SEC_OPEN;
+    add_char_params.write_access = SEC_OPEN;
+
+    err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->version_handles);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    uint32_t kVersion = FW_VERSION;
+    memset(&add_char_params, 0, sizeof(add_char_params));
+    add_char_params.uuid                     = BLE_UUID_ECG_VERSION_CHARACTERISTIC;
+    add_char_params.uuid_type                = p_nus->uuid_type;
+    add_char_params.p_init_value             = (uint8_t*)&kVersion;
+    add_char_params.max_len                  = sizeof(uint32_t);
+    add_char_params.init_len                 = sizeof(uint32_t);
+    add_char_params.is_var_len               = false;
+    add_char_params.char_props.read          = 1;
+    add_char_params.char_props.write         = 0;
+    add_char_params.char_props.write_wo_resp = 0;
+
+    add_char_params.read_access  = SEC_OPEN;
+    add_char_params.write_access = SEC_OPEN;
+
+    err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->id_handles);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    uint32_t status = 0;
     memset(&add_char_params, 0, sizeof(add_char_params));
     add_char_params.uuid                     = BLE_UUID_ECG_STATUS_CHARACTERISTIC;
     add_char_params.uuid_type                = p_nus->uuid_type;
-    add_char_params.p_init_value             = (uint8_t*)&init_value;
+    add_char_params.p_init_value             = (uint8_t*)&status;
     add_char_params.max_len                  = sizeof(uint32_t);
     add_char_params.init_len                 = sizeof(uint32_t);
     add_char_params.is_var_len               = false;
@@ -464,6 +531,21 @@ uint32_t ble_nus_data_send(ble_nus_t * p_nus,
     hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
 
     return sd_ble_gatts_hvx(conn_handle, &hvx_params);
+}
+
+uint32_t ble_ecg_uptime_set(ble_nus_t * p_nus, uint16_t    conn_handle, uint32_t uptime)
+{
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = sizeof(uint32_t);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = (uint8_t*)&uptime;
+
+//    NRF_LOG_DEBUG("Setting value with conn: %d", conn_handle);
+    return sd_ble_gatts_value_set(conn_handle, p_nus->uptime_handles.value_handle, &gatts_value);
 }
 
 uint32_t ble_ecg_status_set(ble_nus_t * p_nus, uint16_t    conn_handle, uint32_t status)

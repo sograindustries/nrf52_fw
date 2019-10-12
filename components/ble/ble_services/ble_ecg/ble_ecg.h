@@ -192,6 +192,9 @@ struct ble_nus_s
     ble_gatts_char_handles_t        tx_handles;         /**< Handles related to the TX characteristic (as provided by the SoftDevice). */
     ble_gatts_char_handles_t        rx_handles;         /**< Handles related to the RX characteristic (as provided by the SoftDevice). */
     ble_gatts_char_handles_t        status_handles;     /**< Handles related to the Status characteristic (as provided by the SoftDevice). */
+    ble_gatts_char_handles_t        uptime_handles;     /**< Handles related to the Uptime characteristic (as provided by the SoftDevice). */
+    ble_gatts_char_handles_t        version_handles;    /**< Handles related to the Version characteristic (as provided by the SoftDevice). */
+    ble_gatts_char_handles_t        id_handles;         /**< Handles related to the ID characteristic (as provided by the SoftDevice). */
     ble_gatts_char_handles_t        arrhythmia_handles;
     blcm_link_ctx_storage_t * const p_link_ctx_storage; /**< Pointer to link context storage with handles of all current connections and its context. */
     ble_nus_data_handler_t          data_handler;       /**< Event handler to be called for handling received data. */
@@ -245,6 +248,8 @@ uint32_t ble_ecg_arrhythmia_send(ble_nus_t * p_nus,
                                  uint8_t   * p_data,
                                  uint16_t  * p_length,
                                  uint16_t    conn_handle);
+
+uint32_t ble_ecg_uptime_set(ble_nus_t * p_nus, uint16_t    conn_handle, uint32_t uptime);
 
 uint32_t ble_ecg_status_set(ble_nus_t * p_nus, uint16_t    conn_handle, uint32_t status);
 
