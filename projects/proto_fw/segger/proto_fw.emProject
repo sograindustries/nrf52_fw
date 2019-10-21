@@ -124,6 +124,7 @@
     </folder>
     <configuration
       Name="Release"
+      batch_build_configurations="Release"
       c_user_include_directories=".;../../../components/ble/ble_services/ble_ecg" />
   </project>
   <configuration
