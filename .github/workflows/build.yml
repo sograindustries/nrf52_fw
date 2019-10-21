@@ -13,6 +13,8 @@ jobs:
 
     - run: mkdir -p path/to/artifact
 
+    - run: ls -alt ./*
+
     - run: echo hello > path/to/artifact/world.txt
 
     - uses: actions/upload-artifact@master
