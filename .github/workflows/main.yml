@@ -7,4 +7,4 @@ jobs:
     steps:
     - name: Hello world action step
       id: hello
-      uses: actions/nrf52_fw@v1
+      uses: nrf52_fw@v1
