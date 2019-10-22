@@ -13,7 +13,7 @@ jobs:
 
     - run: mkdir -p path/to/artifact
 
-    - run: docker run  lifecandid/gourmetplate:build_image ${{ secrets.GITHUB_TOKEN }} sograindustries/nrf52_fw.git Release projects/proto_fw/segger/proto_fw.emProject
+    - run: docker run  lifecandid/gourmetplate:build_image ${{ secrets.TEST_SECRET }} sograindustries/nrf52_fw.git Release projects/proto_fw/segger/proto_fw.emProject
 
     - run: ls -alt ./*
 
