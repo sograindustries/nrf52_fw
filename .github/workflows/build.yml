@@ -13,6 +13,8 @@ jobs:
 
     - run: mkdir -p path/to/artifact
 
+    - run: docker run  lifecandid/gourmetplate:build_image "boo"
+
     - run: ls -alt ./*
 
     - run: echo hello > path/to/artifact/world.txt
