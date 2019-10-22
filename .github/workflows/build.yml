@@ -15,6 +15,8 @@ jobs:
 
     - run: docker run -v $PWD/artifacts:/tmp  lifecandid/gourmetplate:build_image ${{ secrets.TEST_SEC }} sograindustries/nrf52_fw.git ${GITHUB_SHA} Release projects/proto_fw/segger/proto_fw.emProject /repo/projects/proto_fw/segger/Output/Release/Exe/proto_fw.hex /tmp/
 
+    - run: echo "${GITHUB_WORKSPACE}"
+
     - uses: actions/upload-artifact@master
       with:
         name: my-artifact
