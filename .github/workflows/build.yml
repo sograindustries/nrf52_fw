@@ -11,12 +11,12 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - run: mkdir -p /github/workspace/artifacts
+    - run: mkdir -p /artifacts
 
-    - run: docker run -v /github/workspace:/tmp  lifecandid/gourmetplate:build_image ${{ secrets.TEST_SEC }} sograindustries/nrf52_fw.git Release projects/proto_fw/segger/proto_fw.emProject /repo/projects/proto_fw/segger/Output/Release/Exe/proto_fw.hex /tmp/
+    - run: docker run -v /artifacts:/tmp  lifecandid/gourmetplate:build_image ${{ secrets.TEST_SEC }} sograindustries/nrf52_fw.git Release projects/proto_fw/segger/proto_fw.emProject /repo/projects/proto_fw/segger/Output/Release/Exe/proto_fw.hex /tmp/
 
     - uses: actions/upload-artifact@master
       with:
         name: my-artifact
-        path: /github/workspace/artifacts
+        path: /artifacts
 
