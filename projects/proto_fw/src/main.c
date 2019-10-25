@@ -835,8 +835,28 @@ int main(void)
 
     // Start execution.
     printf("\r\nUART started.\r\n");
-    NRF_LOG_INFO("Debug logging for UART over RTT started.");
+    NRF_LOG_INFO("Debug logging for UART over RTT started 3.");
     advertising_start();
+
+    sd_power_gpregret_get(0, &err_code);
+    NRF_LOG_DEBUG("GPRETREG 0: %d", err_code);
+    sd_power_gpregret_get(1, &err_code);
+    NRF_LOG_DEBUG("GPRETREG 1: %d", err_code);
+ 
+    if (err_code > 10) {
+      sd_power_gpregret_clr(0, 0xff);
+      sd_power_gpregret_set(0, 0xB1);
+      sd_power_gpregret_clr(1, 0xff);
+    } else {
+      sd_power_gpregret_clr(1, 0xff);
+      err_code++;
+      sd_power_gpregret_set(1, err_code);
+    }
+
+    sd_power_gpregret_get(0, &err_code);
+    NRF_LOG_DEBUG("GPRETREG 0: %d", err_code);
+    sd_power_gpregret_get(1, &err_code);
+    NRF_LOG_DEBUG("GPRETREG 1: %d", err_code);
 
     // Enter main loop.
     for (;;)
