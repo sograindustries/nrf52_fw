@@ -45,6 +45,8 @@
 
 #if defined(BOARD_NRF6310)
   #include "nrf6310.h"
+#elif defined(BOARD_ARGOS_PROTO_V1)
+  #include "argos_proto_v1.h"
 #elif defined(BOARD_PCA10000)
   #include "pca10000.h"
 #elif defined(BOARD_PCA10001)

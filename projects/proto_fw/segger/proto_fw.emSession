@@ -14,6 +14,8 @@
   <ProjectSessionItem path="proto_fw"/>
   <ProjectSessionItem path="proto_fw;proto_fw"/>
   <ProjectSessionItem path="proto_fw;proto_fw;Application"/>
+  <ProjectSessionItem path="proto_fw;proto_fw;nRF_BLE"/>
+  <ProjectSessionItem path="proto_fw;proto_fw;nRF_BLE_Services"/>
  </Project>
  <Register1/>
  <Register2/>
@@ -38,7 +40,12 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="22" useTextEdit="1" useBinaryEdit="0" left="0" path="../config/sdk_config.h" selected="1" top="12" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="22" useTextEdit="1" useBinaryEdit="0" left="0" path="../config/sdk_config.h" selected="0" top="12" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" useBinaryEdit="0" left="0" path="proto_fw.mak" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="97" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/ble/ble_services/ble_ecg/ble_ecg.c" selected="0" top="76" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="847" useTextEdit="1" useBinaryEdit="0" left="0" path="../src/main.c" selected="1" top="824" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="140" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/libraries/log/src/nrf_log_internal.h" selected="0" top="109" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="577" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/softdevice/s132/headers/nrf_soc.h" selected="0" top="544" codecName="Default"/>
  </Files>
  <ARMCrossStudioWindow activeProject="proto_fw" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/home/andy/argos/ecg/nrf/repo/nRF5_SDK_15.3.0_59ac345/projects/proto_fw/src" debugSearchPath="" autoConnectCapabilities="3199"/>
 </session>
