@@ -80,7 +80,7 @@
     <folder Name="Application">
       <file file_name="../../../main.c" />
       <file file_name="../config/sdk_config.h" />
-      <file file_name="../../../LPFilter.c" />
+      <file file_name="../../../../../../lib/fir_filter/LPFilter.c" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../../../../external/segger_rtt/SEGGER_RTT.c" />
@@ -96,7 +96,7 @@
       Name="Release"
       batch_build_configurations="Release"
       c_preprocessor_definitions="CONFIG_NFCT_PINS_AS_GPIOS"
-      c_user_include_directories="." />
+      c_user_include_directories="../../../../../../lib/fir_filter" />
   </project>
   <configuration
     Name="Release"
