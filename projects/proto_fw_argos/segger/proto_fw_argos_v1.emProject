@@ -98,6 +98,7 @@
       <file file_name="../src/main.c" />
       <file file_name="../src/mock_adc_data.c" />
       <file file_name="../../../lib/fir_filter/LPFilter.c" />
+      <file file_name="../../../lib/ads/ads.cc" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../external/segger_rtt/SEGGER_RTT.c" />
@@ -128,7 +129,7 @@
     <configuration
       Name="Release"
       batch_build_configurations="Release"
-      c_user_include_directories=".;../../../components/ble/ble_services/ble_ecg;../../../lib/fir_filter" />
+      c_user_include_directories=".;../../../components/ble/ble_services/ble_ecg;../../../lib/fir_filter;../../../" />
   </project>
   <configuration
     Name="Release"
