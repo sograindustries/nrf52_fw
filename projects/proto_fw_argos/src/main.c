@@ -1040,9 +1040,9 @@ int main(void)
     uint32_t time_ticks;
     uint32_t err_code = NRF_SUCCESS;
     int data_count;
-    int16_t data_buf[40];
+    int32_t data_buf[30];
     //uint8_t data_buf[80];
-    uint16_t data_length = 60;
+    uint16_t data_length = 120;
 
     // Initialize.
     uart_init();
@@ -1100,12 +1100,7 @@ int main(void)
       pointer %= 1024;
 
       ecg_data = filter_out - (ma >> 10);
-      if(ecg_data > 32767)
-        data_buf[data_count] = 32767;
-      else if(ecg_data < -32768) 
-        data_buf[data_count] = -32768;
-      else
-        data_buf[data_count] = ecg_data ;
+      data_buf[data_count] = ecg_data ;
       //data_buf[2*data_count+1] = (ecg_data & 0xff00) >> 8;
       data_count++;
       if(data_count == 30) {
