@@ -11,6 +11,7 @@ namespace argos {
     typedef struct {
       int miso;
       int mosi;
+      int sck;
       int csn;
       int rst;
       int drdy;

@@ -1,9 +1,14 @@
 #include <stdint.h>
 #include <cstring>
 
+#include "nrf.h"
 #include "nrf_drv_spi.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
+#include "app_util_platform.h"
+#include "nrf_gpio.h"
+#include "nrf_delay.h"
+#include "nrf_drv_gpiote.h"
 
 #include "lib/ads/ads.h"
 
@@ -11,11 +16,16 @@ namespace argos {
   namespace ads {
 
     volatile bool spi_xfer_done;
-
+    volatile bool new_data;
+    
     void spi_event_handler(nrf_drv_spi_evt_t const * p_event,
                            void *                    p_context)
     {
       spi_xfer_done = true;
+    }
+
+    void ads_drdy_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
+      new_data = true;
     }
     
     ADS::ADS(const nrf_drv_spi_t& spi, const ads_pins_t& ads_pins):
@@ -23,10 +33,89 @@ namespace argos {
       pins_(ads_pins)
     {
       spi_xfer_done = false;
+      new_data = false;
     }
 
     bool ADS::Init(){
-  
+      uint32_t error_code;
+      
+      // Sets up the reset pin
+      nrf_gpio_cfg_output(pins_.rst);
+      nrf_gpio_pin_write(pins_.rst, 0);
+
+      nrf_gpio_cfg_output(pins_.start);
+      nrf_gpio_pin_write(pins_.start, 0);
+
+      nrf_gpio_cfg_output(pins_.clksel);
+      nrf_gpio_pin_write(pins_.clksel, 1);
+
+      error_code = nrf_drv_gpiote_init();
+      if (error_code != NRF_SUCCESS ){
+        NRF_LOG_WARNING("Driver init failed!");
+        return false;
+      }
+
+      nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+      in_config.pull = NRF_GPIO_PIN_PULLDOWN;
+      error_code = nrf_drv_gpiote_in_init(pins_.drdy, &in_config, ads_drdy_handler);
+      if (error_code != NRF_SUCCESS ){
+        NRF_LOG_DEBUG("DRDY callback init failed!");
+        return false;
+      }
+
+      nrf_drv_spi_config_t spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+      spi_config.ss_pin = pins_.csn;
+      spi_config.miso_pin = pins_.miso;
+      spi_config.mosi_pin = pins_.mosi;
+      spi_config.sck_pin = pins_.sck;
+      spi_config.mode = NRF_DRV_SPI_MODE_1;
+      spi_config.frequency = NRF_DRV_SPI_FREQ_500K;
+      APP_ERROR_CHECK(nrf_drv_spi_init(&spi_, &spi_config, spi_event_handler, NULL));
+
+      NRF_LOG_INFO("Configuring ADS");
+      nrf_delay_ms(200);
+      nrf_gpio_pin_set(pins_.rst);
+      nrf_delay_ms(1000);
+      nrf_gpio_pin_clear(pins_.rst);
+      nrf_delay_ms(10);
+      nrf_gpio_pin_set(pins_.rst);
+      nrf_delay_ms(1);
+
+      // Stop Read Data Continously
+      SendCommand(ADS_CMND_SDATAC);
+      nrf_delay_ms(10);
+
+      // Sets sampling rate
+      DebugWriteRegister(1, 1);
+      nrf_delay_ms(20);
+
+      // Enables Internal Reference
+      DebugWriteRegister(2, 0b10100000);
+      nrf_delay_ms(20);
+
+      // Shorts inputs
+      //  DebugWriteRegister(4, 0b00000001);
+      // Normal Gain 6
+      DebugWriteRegister(4, 0b00000000);
+      // Normal Gain 12
+      //  DebugWriteRegister(4, 0b01100000);
+      nrf_delay_ms(20);
+
+      // Disables Channel 2
+      //  DebugWriteRegister(5, 0b10000000);
+      nrf_delay_ms(20);
+
+      // Asserts start bit
+      SendCommand(ADS_CMND_START);
+      //  nrf_delay_ms(2000);
+
+      // Start Read data Continouously
+      SendCommand(ADS_CMND_RDATAC);
+      nrf_delay_ms(100);
+      SendCommand(ADS_CMND_OFFSETCAL);
+      
+      NRF_LOG_INFO("ADS Configured");
+
       return true;
     }
 
