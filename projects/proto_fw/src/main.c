@@ -126,7 +126,7 @@ static ble_uuid_t m_adv_uuids[]          =                                      
 
 const nrf_drv_timer_t TIMER_LED = NRF_DRV_TIMER_INSTANCE(1);
 
-void get_mock_normal_adc(int16_t* data, int length) {
+void get_mock_normal_adc(int32_t* data, int length) {
   static int offset = 0;
   for (int ii = 0; ii < length; ii++) {
     data[ii] = mock_normal_data[offset];
@@ -135,7 +135,7 @@ void get_mock_normal_adc(int16_t* data, int length) {
   }
 }
 
-void get_mock_abnormal_adc(int16_t* data, int length) {
+void get_mock_abnormal_adc(int32_t* data, int length) {
   static int offset = 0;
   for (int ii = 0; ii < length; ii++) {
     data[ii] = mock_abnormal_data[offset];
@@ -144,14 +144,14 @@ void get_mock_abnormal_adc(int16_t* data, int length) {
   }
 }
 
-void get_ramp(int16_t* data, int length) {
+void get_ramp(int32_t* data, int length) {
   static int16_t value = 0;
   for(int ii = 0; ii < length; ii++) {
     data[ii] = value++;
   }
 }
 
-void get_constant(int16_t* data, int length, int16_t constant) {
+void get_constant(int32_t* data, int length, int16_t constant) {
   for(int ii = 0; ii < length; ii++) {
     data[ii] = constant;
   }
@@ -172,8 +172,8 @@ void update_led(uint8_t mask) {
  */
 void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 {
-    static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
-    const uint16_t data_length = 60;
+    static int32_t data_array[30];
+    const uint16_t data_length = 120;
     static uint8_t index = 10;
     uint32_t           err_code;
     static uint32_t timer_count = 0;
@@ -194,21 +194,21 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
             if (ecg_control & 0x1) {
               switch ((ecg_control >> 1) & 0x3) {
                 case 0:
-                  get_ramp((int16_t*) data_array, data_length/2);
+                  get_ramp(data_array, 30);
                   break;
                 case 1:
-                  get_mock_normal_adc((int16_t*) data_array, data_length/2);
+                  get_mock_normal_adc(data_array, 30);
                   break;
                 case 2:
-                  get_mock_abnormal_adc((int16_t*) data_array, data_length/2);
+                  get_mock_abnormal_adc(data_array, 30);
                   break;
                 case 3:
-                  get_constant((int16_t*) data_array, data_length/2, 1);
+                  get_constant(data_array, 30, 1);
                   break;
                 default:
                   break;
               }
-              ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
+              ble_nus_data_send(&m_nus, (uint8_t*)data_array, &data_length, m_conn_handle);
             }
 
             if (((timer_count % 50) == 0) && ((ecg_control >> 7) & 0x1)) {
