@@ -11,13 +11,12 @@
  <Memory3/>
  <Memory4/>
  <Project>
-  <ProjectSessionItem path="proto_fw"/>
-  <ProjectSessionItem path="proto_fw;proto_fw"/>
-  <ProjectSessionItem path="proto_fw;proto_fw;Application"/>
-  <ProjectSessionItem path="proto_fw;proto_fw;Board Definition"/>
-  <ProjectSessionItem path="proto_fw;proto_fw;Board Support"/>
-  <ProjectSessionItem path="proto_fw;proto_fw;nRF_BLE"/>
-  <ProjectSessionItem path="proto_fw;proto_fw;nRF_BLE_Services"/>
+  <ProjectSessionItem path="proto_fw_argos_v1"/>
+  <ProjectSessionItem path="proto_fw_argos_v1;proto_fw_argos_v1"/>
+  <ProjectSessionItem path="proto_fw_argos_v1;proto_fw_argos_v1;Application"/>
+  <ProjectSessionItem path="proto_fw_argos_v1;proto_fw_argos_v1;Board Definition"/>
+  <ProjectSessionItem path="proto_fw_argos_v1;proto_fw_argos_v1;nRF_BLE_Services"/>
+  <ProjectSessionItem path="proto_fw_argos_v1;proto_fw_argos_v1;nRF_Drivers"/>
  </Project>
  <Register1/>
  <Register2/>
@@ -42,14 +41,9 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="22" useTextEdit="1" useBinaryEdit="0" left="0" path="../config/sdk_config.h" selected="0" top="12" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" useBinaryEdit="0" left="0" path="proto_fw.mak" selected="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="97" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/ble/ble_services/ble_ecg/ble_ecg.c" selected="0" top="76" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="12" y="743" useTextEdit="1" useBinaryEdit="0" left="0" path="../src/main.c" selected="1" top="722" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="140" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/libraries/log/src/nrf_log_internal.h" selected="0" top="109" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="577" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/softdevice/s132/headers/nrf_soc.h" selected="0" top="544" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/boards/boards.c" selected="0" top="27" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="160" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/libraries/util/app_error.h" selected="0" top="139" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="18" y="1035" useTextEdit="1" useBinaryEdit="0" left="0" path="../src/main.c" selected="1" top="1027" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="31" y="328" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../examples/peripheral/spi/main.c" selected="0" top="309" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="119" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../integration/nrfx/legacy/nrf_drv_spi.h" selected="0" top="78" codecName="Default"/>
  </Files>
- <ARMCrossStudioWindow activeProject="proto_fw" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/home/andy/argos/ecg/nrf/repo/nRF5_SDK_15.3.0_59ac345/projects/proto_fw/src" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <ARMCrossStudioWindow activeProject="proto_fw_argos_v1" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/home/andy/argos/ecg/nrf/repo/nRF5_SDK_15.3.0_59ac345/modules/nrfx/drivers/src" debugSearchPath="" autoConnectCapabilities="3199"/>
 </session>

@@ -68,8 +68,16 @@
 #include "app_uart.h"
 #include "app_util_platform.h"
 #include "bsp.h"
+#include "boards.h"
 //#include "bsp_btn_ble.h"
 #include "nrf_pwr_mgmt.h"
+
+#include "nrf_drv_spi.h"
+#include "app_util_platform.h"
+#include "nrf_gpio.h"
+#include "nrf_delay.h"
+#include "nrf_drv_gpiote.h"
+#include "LPFilter.h"
 
 #if defined (UART_PRESENT)
 #include "nrf_uart.h"
@@ -110,6 +118,228 @@
 #define ABNORMAL_ADC_SAMPLES 6260
 extern const int16_t mock_normal_data[NORMAL_ADC_SAMPLES];
 extern const int16_t mock_abnormal_data[ABNORMAL_ADC_SAMPLES];
+
+// SPI
+#define SPI_INSTANCE  0 /**< SPI instance index. */
+static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);  /**< SPI instance. */
+static volatile bool spi_xfer_done;  /**< Flag used to indicate that SPI instance completed the transfer. */
+
+static uint8_t       m_tx_buf[16];
+static uint8_t       m_rx_buf[16];   
+static const uint8_t m_length = sizeof(m_tx_buf); 
+
+typedef enum {
+  // System Commands
+  ADS_CMND_WAKEUP    = 0x02,   // Wake-up from standby mode
+  ADS_CMND_STANDBY   = 0x04,   // Enter standby mode
+  ADS_CMND_RESET_CMD = 0x06,   // Reset the device registers
+  ADS_CMND_START     = 0x08,   // Start/restart (synchronize) conversions
+  ADS_CMND_STOP      = 0x0A,   // Stop conversion
+  ADS_CMND_OFFSETCAL = 0x1A,   // Channel offset calibration - needs to be sent every time there is a change to the PGA gain
+  // Data Read Commands
+  ADS_CMND_RDATAC    = 0x10,   // Enable Read Data Continuous mode.
+                               // - This mode is the default mode at power-up.
+  ADS_CMND_SDATAC    = 0x11,   // Stop Read Data Continuously mode
+  ADS_CMND_RDATA     = 0x12,   // Read data by command; supports multiple read back.
+  // Register Read/Write Commands
+  ADS_CMND_RREG      = 0x20,   // Read n nnnn registers starting at address r rrrr
+                               //  - first byte 001r rrrr (2xh)(2) - second byte 000n nnnn(2)
+  ADS_CMND_WREG      = 0x40    // Write n nnnn registers starting at address r rrrr
+                               //  - first byte 010r rrrr (2xh)(2) - second byte 000n nnnn(2)
+} ADS1x9xCommand_t;
+
+
+/**
+ * @brief SPI user event handler.
+ * @param event
+ */
+void spi_event_handler(nrf_drv_spi_evt_t const * p_event,
+                       void *                    p_context)
+{
+    spi_xfer_done = true;
+//    NRF_LOG_INFO("Transfer completed.");
+//    NRF_LOG_INFO(" Received:");
+//    NRF_LOG_HEXDUMP_INFO(m_rx_buf, 16);
+    
+}
+
+void WriteRegister(uint8_t address, uint8_t value) {
+  memset(m_tx_buf, 0, 16);
+  memset(m_rx_buf, 0, 16);
+  spi_xfer_done = false;
+  m_tx_buf[0] = 0x40 + address;
+  m_tx_buf[1] = 1;
+  m_tx_buf[2] = value;
+
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, 16, m_rx_buf, 3));
+
+  while (!spi_xfer_done) {
+    __WFE();
+  }
+
+  return;
+}
+
+uint8_t ReadRegister(uint8_t address) {
+  memset(m_tx_buf, 0, 16);
+  memset(m_rx_buf, 0, 16);
+  spi_xfer_done = false;
+  m_tx_buf[0] = 0x20 + address;
+  m_tx_buf[1] = 1;
+
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, 16, m_rx_buf, 3));
+
+  while (!spi_xfer_done) {
+    __WFE();
+  }
+
+  return m_rx_buf[2];
+}
+
+void DebugWriteRegister(uint8_t address, uint8_t value) {
+    uint8_t debug_value;
+    debug_value = ReadRegister(address);
+    NRF_LOG_INFO("Value %d: %x", address, debug_value);
+    WriteRegister(address, value);
+    debug_value = ReadRegister(address);
+    NRF_LOG_INFO("Value %d: %x", address, debug_value);
+    NRF_LOG_FLUSH();
+}
+
+void SendCommand(uint8_t op_code){
+  memset(m_tx_buf, 0, 16);
+  memset(m_rx_buf, 0, 16);
+  spi_xfer_done = false;
+  m_tx_buf[0] = op_code;
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, 16, m_rx_buf, 1));
+
+  while (!spi_xfer_done) {
+    __WFE();
+  }
+
+  return;  
+}
+
+int32_t GetData() {
+  int32_t raw_value;
+  memset(m_tx_buf, 0, 16);
+  memset(m_rx_buf, 0, 16);
+  spi_xfer_done = false;
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, 6, m_rx_buf, 6));
+
+  while (!spi_xfer_done) {
+    __WFE();
+  }
+
+  raw_value = 0;
+  if (m_rx_buf[3] & 0x80) {
+    raw_value = 0xff;
+  }
+  raw_value <<= 8;
+  raw_value += m_rx_buf[3];
+  raw_value <<= 8;
+  raw_value += m_rx_buf[4];
+  raw_value <<= 8;
+  raw_value += m_rx_buf[5];
+  return raw_value;
+}
+
+LPFilter filter;
+volatile bool new_data = false;
+
+void drdy_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
+  new_data = true;
+}
+
+void InitADS() {
+ uint32_t error_code;
+ // Sets up the reset pin
+  nrf_gpio_cfg_output(ADS_RST_PIN);
+  nrf_gpio_pin_write(ADS_RST_PIN, 0);
+
+  nrf_gpio_cfg_output(ADS_START_PIN);
+  nrf_gpio_pin_write(ADS_START_PIN, 0);
+  
+  nrf_gpio_cfg_output(ADS_CLKSEL_PIN);
+  nrf_gpio_pin_write(ADS_CLKSEL_PIN, 1);
+
+  //nrf_gpio_cfg_input(DRDY_PIN, NRF_GPIO_PIN_PULLDOWN);
+  error_code = nrf_drv_gpiote_init();
+  if (error_code != NRF_SUCCESS ){
+    NRF_LOG_DEBUG("Driver init failed!");
+    NRF_LOG_FLUSH();
+  }
+
+  nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+  in_config.pull = NRF_GPIO_PIN_PULLDOWN;
+  error_code = nrf_drv_gpiote_in_init(ADS_DRDY_PIN, &in_config, drdy_handler);
+  if (error_code != NRF_SUCCESS ){
+    NRF_LOG_DEBUG("Init failed!");
+    NRF_LOG_FLUSH();
+  }
+  
+  nrf_drv_spi_config_t spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+  spi_config.ss_pin = ADS_CSN_PIN;
+  spi_config.miso_pin = ADS_MISO_PIN;
+  spi_config.mosi_pin = ADS_MOSI_PIN;
+  spi_config.sck_pin = ADS_SCK_PIN;
+  spi_config.mode = NRF_DRV_SPI_MODE_1;
+ // spi_config.frequency = NRF_DRV_SPI_FREQ_500K;
+  spi_config.frequency = NRF_DRV_SPI_FREQ_1M;
+  APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, spi_event_handler, NULL));
+
+  // Inits filter
+  LPFilter_init(&filter);
+
+  NRF_LOG_INFO("Configuring ADS");
+  NRF_LOG_FLUSH();
+  nrf_delay_ms(200);
+  nrf_gpio_pin_set(ADS_RST_PIN);
+  nrf_delay_ms(1000);
+  nrf_gpio_pin_clear(ADS_RST_PIN);
+  nrf_delay_ms(10);
+  nrf_gpio_pin_set(ADS_RST_PIN);
+  nrf_delay_ms(1);
+  NRF_LOG_FLUSH();
+
+  // Stop Read Data Continously
+  SendCommand(ADS_CMND_SDATAC);
+  nrf_delay_ms(100);
+
+  // Sets sampling rate
+  DebugWriteRegister(1, 1);
+  nrf_delay_ms(20);
+
+  // Enables Internal Reference
+  DebugWriteRegister(2, 0b10100000);
+  nrf_delay_ms(20);
+
+  // Shorts inputs
+//  DebugWriteRegister(4, 0b00000001);
+  // Normal Gain 6
+  DebugWriteRegister(4, 0b00000000);
+  // Normal Gain 12
+//  DebugWriteRegister(4, 0b01100000);
+  nrf_delay_ms(20);
+
+  // Disables Channel 2
+//  DebugWriteRegister(5, 0b10000000);
+  nrf_delay_ms(20);
+
+  // Asserts start bit
+  SendCommand(ADS_CMND_START);
+//  nrf_delay_ms(2000);
+
+  // Start Read data Continouously
+  SendCommand(ADS_CMND_RDATAC);
+  nrf_delay_ms(1000);
+  SendCommand(ADS_CMND_OFFSETCAL);
+  NRF_LOG_DEBUG("Running...");
+}
+
+int32_t data[1024];
+int pointer = 0;
+int ma = 0;
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
@@ -209,7 +439,7 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
                 default:
                   break;
               }
-              ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
+              //ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
             }
 
             if (((timer_count % 50) == 0) && ((ecg_control >> 7) & 0x1)) {
@@ -803,9 +1033,16 @@ static void advertising_start(void)
 int main(void)
 {
     bool erase_bonds;
+    int32_t adc_value;
+    int32_t filter_out;
+    int32_t ecg_data;
     uint32_t time_ms = 100; //Time(in miliseconds) between consecutive compare events.
     uint32_t time_ticks;
     uint32_t err_code = NRF_SUCCESS;
+    int data_count;
+    int16_t data_buf[40];
+    //uint8_t data_buf[80];
+    uint16_t data_length = 60;
 
     // Initialize.
     uart_init();
@@ -836,17 +1073,51 @@ int main(void)
 
     // Start execution.
     printf("\r\nUART started.\r\n");
-    NRF_LOG_INFO("Debug logging for UART over RTT started.");
-    advertising_start();
+    NRF_LOG_INFO("Debug logging for UART over RTT started 03.");
+    NRF_LOG_FLUSH();
+    InitADS();
 
+    advertising_start();
+    while (nrf_gpio_pin_read(ADS_DRDY_PIN) == 0)
+      ;
+    nrf_drv_gpiote_in_event_enable(ADS_DRDY_PIN, true);
     // Enter main loop.
-    for (;;)
-    {
-        idle_state_handle();
+    data_count = 0;
+    for (;;) {
+      NRF_LOG_FLUSH();
+      while (new_data == false);
+      new_data = false;
+
+      adc_value = GetData();
+
+      LPFilter_put(&filter, adc_value);
+      filter_out = LPFilter_get(&filter);
+      //filter_out = adc_value;
+      ma += filter_out;
+      ma -= data[pointer];
+      data[pointer] = filter_out;
+      pointer++;
+      pointer %= 1024;
+
+      ecg_data = filter_out - (ma >> 10);
+      if(ecg_data > 32767)
+        data_buf[data_count] = 32767;
+      else if(ecg_data < -32768) 
+        data_buf[data_count] = -32768;
+      else
+        data_buf[data_count] = ecg_data ;
+      //data_buf[2*data_count+1] = (ecg_data & 0xff00) >> 8;
+      data_count++;
+      if(data_count == 30) {
+        ble_nus_data_send(&m_nus, (uint8_t*)data_buf, &data_length, m_conn_handle);
+        data_count = 0;
+      }
+      
+      //NRF_LOG_INFO("%d", ecg_data);
+      //NRF_LOG_FLUSH();
     }
 }
-
-
+//ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
 /**
  * @}
  */

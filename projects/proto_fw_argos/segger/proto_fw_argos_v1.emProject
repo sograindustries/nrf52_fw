@@ -86,6 +86,9 @@
       <file file_name="../../../modules/nrfx/drivers/src/nrfx_uart.c" />
       <file file_name="../../../modules/nrfx/drivers/src/nrfx_uarte.c" />
       <file file_name="../../../modules/nrfx/drivers/src/nrfx_timer.c" />
+      <file file_name="../../../modules/nrfx/drivers/src/nrfx_spi.c" />
+      <file file_name="../../../modules/nrfx/drivers/src/nrfx_spim.c" />
+      <file file_name="../../../integration/nrfx/legacy/nrf_drv_spi.c" />
     </folder>
     <folder Name="Board Support">
       <file file_name="../../../components/libraries/bsp/bsp.c" />
@@ -94,6 +97,7 @@
       <file file_name="../config/sdk_config.h" />
       <file file_name="../src/main.c" />
       <file file_name="../src/mock_adc_data.c" />
+      <file file_name="../../../lib/fir_filter/LPFilter.c" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../external/segger_rtt/SEGGER_RTT.c" />
@@ -124,7 +128,7 @@
     <configuration
       Name="Release"
       batch_build_configurations="Release"
-      c_user_include_directories=".;../../../components/ble/ble_services/ble_ecg" />
+      c_user_include_directories=".;../../../components/ble/ble_services/ble_ecg;../../../lib/fir_filter" />
   </project>
   <configuration
     Name="Release"
