@@ -835,7 +835,7 @@ int main(void)
 
     // Start execution.
     printf("\r\nUART started.\r\n");
-    NRF_LOG_INFO("Debug logging for UART over RTT started.");
+    NRF_LOG_INFO("Debug logging for UART over RTT started V3.");
     advertising_start();
 
     // Enter main loop.
