@@ -11,6 +11,7 @@
 #include "nrf_log_ctrl.h"
 
 #include "lib/ads/ads.h"
+#include "lib/circbuf/circbuf.h"
 
 static nrf_drv_spi_t spi_;
 static ads_pins_t pins_;
@@ -18,15 +19,36 @@ static uint8_t tx_buf_[kAdsBufferLength];
 static uint8_t rx_buf_[kAdsBufferLength];
 
 volatile bool spi_xfer_done;
-volatile bool new_data;
+volatile bool ads_overflow;
+volatile bool ads_new_data;
+
+#define ADSBUFFER ads_buf
+#define ADSBUFFERDEPTH 1024
+CIRC_GBUF_DEF(int32_t, ADSBUFFER, ADSBUFFERDEPTH)
 
 void spi_event_handler(nrf_drv_spi_evt_t const *p_event,
     void *p_context) {
   spi_xfer_done = true;
 }
 
+bool AdsNewData(){
+  return ads_new_data;
+}
+
 void ads_drdy_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
-  new_data = true;
+  ads_new_data = true;
+//  ecg_value = _AdsGetData();
+//  if(CIRC_GBUF_PUSH(ADSBUFFER, ecg_value))
+//    ads_overflow = true;
+
+}
+
+bool AdsOverflow() {
+  if( ads_overflow ){
+    ads_overflow = false;
+    return true;
+  }
+  return false;
 }
 
 bool AdsInit(const nrf_drv_spi_t spi, const ads_pins_t ads_pins) {
@@ -34,7 +56,7 @@ bool AdsInit(const nrf_drv_spi_t spi, const ads_pins_t ads_pins) {
 
   spi_ = spi;
   pins_ = ads_pins;
-  
+
   // Sets up the reset pin
   nrf_gpio_cfg_output(pins_.rst);
   nrf_gpio_pin_write(pins_.rst, 0);
@@ -55,7 +77,7 @@ bool AdsInit(const nrf_drv_spi_t spi, const ads_pins_t ads_pins) {
   in_config.pull = NRF_GPIO_PIN_PULLDOWN;
   error_code = nrf_drv_gpiote_in_init(pins_.drdy, &in_config, ads_drdy_handler);
   if (error_code != NRF_SUCCESS) {
-    NRF_LOG_DEBUG("DRDY callback init failed!");
+    NRF_LOG_WARNING("DRDY callback init failed!");
     return false;
   }
 
@@ -79,7 +101,7 @@ bool AdsInit(const nrf_drv_spi_t spi, const ads_pins_t ads_pins) {
 
   // Stop Read Data Continously
   AdsSendCommand(ADS_CMND_SDATAC);
-  nrf_delay_ms(10);
+  nrf_delay_ms(100);
 
   // Sets sampling rate
   AdsDebugWriteRegister(1, 1);
@@ -107,8 +129,11 @@ bool AdsInit(const nrf_drv_spi_t spi, const ads_pins_t ads_pins) {
 
   // Start Read data Continouously
   AdsSendCommand(ADS_CMND_RDATAC);
-  nrf_delay_ms(100);
+  nrf_delay_ms(1000);
   AdsSendCommand(ADS_CMND_OFFSETCAL);
+
+  while (nrf_gpio_pin_read(pins_.drdy) == 0);
+  nrf_drv_gpiote_in_event_enable(pins_.drdy, true);
 
   NRF_LOG_INFO("ADS Configured");
 
@@ -123,7 +148,7 @@ void AdsWriteRegister(uint8_t address, uint8_t value) {
   tx_buf_[1] = 1;
   tx_buf_[2] = value;
 
-  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi_, tx_buf_, 3, rx_buf_, 3));
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi_, tx_buf_, 16, rx_buf_, 3));
 
   while (!spi_xfer_done) {
     __WFE();
@@ -139,7 +164,7 @@ uint8_t AdsReadRegister(uint8_t address) {
   tx_buf_[0] = 0x20 + address;
   tx_buf_[1] = 1;
 
-  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi_, tx_buf_, 3, rx_buf_, 3));
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi_, tx_buf_, 16, rx_buf_, 3));
 
   while (!spi_xfer_done) {
     __WFE();
@@ -163,7 +188,7 @@ void AdsSendCommand(ADS1x9xCommand_t command) {
   memset(rx_buf_, 0, kAdsBufferLength);
   spi_xfer_done = false;
   tx_buf_[0] = command;
-  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi_, tx_buf_, 1, rx_buf_, 1));
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi_, tx_buf_, 16, rx_buf_, 1));
 
   while (!spi_xfer_done) {
     __WFE();
@@ -172,12 +197,17 @@ void AdsSendCommand(ADS1x9xCommand_t command) {
   return;
 }
 
+int32_t AdsGetDataCount() {
+  return ADSBUFFERDEPTH - CIRC_GBUF_FS(ADSBUFFER);
+}
+
 int32_t AdsGetData() {
+  ads_new_data = false;
   int32_t raw_value;
   memset(tx_buf_, 0, kAdsBufferLength);
   memset(rx_buf_, 0, kAdsBufferLength);
   spi_xfer_done = false;
-  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi_, tx_buf_, 6, rx_buf_, 6));
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi_, tx_buf_, 16, rx_buf_, 6));
 
   while (!spi_xfer_done) {
     __WFE();

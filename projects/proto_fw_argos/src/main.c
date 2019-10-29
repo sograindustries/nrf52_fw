@@ -816,6 +816,7 @@ static void advertising_start(void)
 int main(void)
 {
     bool erase_bonds;
+    bool status;
     int32_t adc_value;
     int32_t filter_out;
     int32_t ecg_data;
@@ -875,21 +876,40 @@ int main(void)
     ads_pins.start = ADS_START_PIN;
     ads_pins.clksel = ADS_CLKSEL_PIN;
 
-    AdsInit(spi, ads_pins);
+    status = AdsInit(spi, ads_pins);
+    if( !status) {
+      NRF_LOG_WARNING("Failed to init ADS!");
+      NRF_LOG_FLUSH();
+      while(1);
+    }
 
     advertising_start();
-    while (nrf_gpio_pin_read(ADS_DRDY_PIN) == 0)
-      ;
+    //while (nrf_gpio_pin_read(ADS_DRDY_PIN) == 0)
+    //  ;
     nrf_drv_gpiote_in_event_enable(ADS_DRDY_PIN, true);
     // Enter main loop.
     data_count = 0;
+    time_ticks = 0;
     for (;;) {
-      NRF_LOG_FLUSH();
+
+      while(1){
+        __WFE();
+        if (AdsNewData()) {
+          break;
+        }
+      };
+
+      /*
+      for( data_count = 0; data_count < 30; data_count++) {
+        data_buf[data_count] = AdsGetData();
+      }
+      ble_nus_data_send(&m_nus, (uint8_t*)data_buf, &data_length, m_conn_handle);
+  */
       /*
       while (new_data == false);
       new_data = false;
-
-      adc_value = GetData();
+*/
+      adc_value = AdsGetData();
 
       LPFilter_put(&filter, adc_value);
       filter_out = LPFilter_get(&filter);
@@ -907,11 +927,13 @@ int main(void)
       if(data_count == 30) {
         ble_nus_data_send(&m_nus, (uint8_t*)data_buf, &data_length, m_conn_handle);
         data_count = 0;
+        //NRF_LOG_INFO("%d", ecg_data);
+ //       NRF_LOG_INFO("%d", time_ticks++);
+ //       NRF_LOG_FLUSH();
       }
-      
-      //NRF_LOG_INFO("%d", ecg_data);
       //NRF_LOG_FLUSH();
-      */
+
+      
     }
 }
 //ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);

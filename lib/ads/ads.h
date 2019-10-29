@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define kAdsBufferLength  6
+#define kAdsBufferLength  16
 
 typedef struct {
   int miso;
@@ -36,14 +36,19 @@ typedef enum {
   //  - first byte 010r rrrr (2xh)(2) - second byte 000n nnnn(2)
 } ADS1x9xCommand_t;
 
+bool AdsOverflow();
+
 bool AdsInit(const nrf_drv_spi_t spi, const ads_pins_t ads_pins);
 
 int32_t AdsGetData();
+//int32_t _AdsGetData();
 
 void AdsWriteRegister(uint8_t address, uint8_t value);
 uint8_t AdsReadRegister(uint8_t address);
 void AdsDebugWriteRegister(uint8_t address, uint8_t value);
 void AdsSendCommand(ADS1x9xCommand_t command);
 
+bool AdsNewData();
+int32_t AdsGetDataCount();
 
 #endif

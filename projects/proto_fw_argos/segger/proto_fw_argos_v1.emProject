@@ -99,6 +99,7 @@
       <file file_name="../../../lib/fir_filter/LPFilter.c" />
       <file file_name="../src/main.c" />
       <file file_name="../../../lib/ads/ads.c" />
+      <file file_name="../../../lib/circbuf/circbuf.c" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../external/segger_rtt/SEGGER_RTT.c" />
