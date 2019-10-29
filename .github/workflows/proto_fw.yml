@@ -23,6 +23,6 @@ jobs:
 
     - uses: actions/upload-artifact@master
       with:
-        name: "hex_outputs"
+        name: "bmd_hex_outputs"
         path: artifacts
 
