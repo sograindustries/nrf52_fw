@@ -95,10 +95,10 @@
     </folder>
     <folder Name="Application">
       <file file_name="../config/sdk_config.h" />
-      <file file_name="../src/main.c" />
       <file file_name="../src/mock_adc_data.c" />
       <file file_name="../../../lib/fir_filter/LPFilter.c" />
-      <file file_name="../../../lib/ads/ads.cc" />
+      <file file_name="../src/main.c" />
+      <file file_name="../../../lib/ads/ads.c" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../external/segger_rtt/SEGGER_RTT.c" />
