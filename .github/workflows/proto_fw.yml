@@ -1,4 +1,4 @@
-name: Action CI
+name: BMD-300 Dev Board Hex
 
 on: [push]
 

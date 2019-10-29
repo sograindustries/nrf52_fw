@@ -1,4 +1,4 @@
-name: Action CI
+name: Argos Dev Board Hex
 
 on: [push]
 
