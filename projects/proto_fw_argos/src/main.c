@@ -79,6 +79,7 @@
 #include "nrf_drv_gpiote.h"
 #include "LPFilter.h"
 #include "lib/ads/ads.h"
+#include "lib/circbuf/circbuf.h"
 
 #if defined (UART_PRESENT)
 #include "nrf_uart.h"
@@ -90,6 +91,7 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+
 
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -137,10 +139,13 @@ static ble_uuid_t m_adv_uuids[]          =                                      
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
 
+#define ADSBUFFER ads_buf
+#define ADSBUFFERDEPTH 1024
+CIRC_GBUF_DEF(int32_t, ADSBUFFER, ADSBUFFERDEPTH)
 
 const nrf_drv_timer_t TIMER_LED = NRF_DRV_TIMER_INSTANCE(1);
 
-void get_mock_normal_adc(int16_t* data, int length) {
+void get_mock_normal_adc(int32_t* data, int length) {
   static int offset = 0;
   for (int ii = 0; ii < length; ii++) {
     data[ii] = mock_normal_data[offset];
@@ -149,7 +154,21 @@ void get_mock_normal_adc(int16_t* data, int length) {
   }
 }
 
-void get_mock_abnormal_adc(int16_t* data, int length) {
+bool get_ads_data(int32_t* data, int length){
+  int data_count;
+  // Checks if we have enough data in the queue.
+  data_count = ADSBUFFERDEPTH - CIRC_GBUF_FS(ADSBUFFER);
+  NRF_LOG_DEBUG("Data Count: %d", data_count);
+  if(data_count < length && data_count > 0)
+    return false;
+
+  for(int ii = 0; ii < length; ii++) {
+    CIRC_GBUF_POP(ADSBUFFER, &data[ii]);
+  }
+  return true;
+}
+
+void get_mock_abnormal_adc(int32_t* data, int length) {
   static int offset = 0;
   for (int ii = 0; ii < length; ii++) {
     data[ii] = mock_abnormal_data[offset];
@@ -158,14 +177,14 @@ void get_mock_abnormal_adc(int16_t* data, int length) {
   }
 }
 
-void get_ramp(int16_t* data, int length) {
+void get_ramp(int32_t* data, int length) {
   static int16_t value = 0;
   for(int ii = 0; ii < length; ii++) {
     data[ii] = value++;
   }
 }
 
-void get_constant(int16_t* data, int length, int16_t constant) {
+void get_constant(int32_t* data, int length, int16_t constant) {
   for(int ii = 0; ii < length; ii++) {
     data[ii] = constant;
   }
@@ -187,15 +206,17 @@ void update_led(uint8_t mask) {
 void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 {
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
-    const uint16_t data_length = 60;
+    const uint16_t data_length = 120;
     static uint8_t index = 10;
     uint32_t           err_code;
     static uint32_t timer_count = 0;
     uint32_t status = 0;
     int timer_count_size = sizeof(timer_count);
+    bool update;
 
     ble_arrhythmia_s ble_arrhythmia;
     int16_t ble_arrhythmia_size = sizeof(ble_arrhythmia);
+    update = true;
     switch (event_type)
     {
         case NRF_TIMER_EVENT_COMPARE1:
@@ -204,25 +225,26 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 
             status = 255 - ((timer_count >> 5) % 256);
             ble_ecg_status_set(&m_nus, m_conn_handle, status);
-
             if (ecg_control & 0x1) {
               switch ((ecg_control >> 1) & 0x3) {
                 case 0:
-                  get_ramp((int16_t*) data_array, data_length/2);
+                  get_ramp((int32_t*) data_array, data_length/4);
                   break;
                 case 1:
-                  get_mock_normal_adc((int16_t*) data_array, data_length/2);
+                  update = get_ads_data((int32_t*) data_array, data_length/4);
                   break;
                 case 2:
-                  get_mock_abnormal_adc((int16_t*) data_array, data_length/2);
+                  get_mock_normal_adc((int32_t*) data_array, data_length/4);
                   break;
                 case 3:
-                  get_constant((int16_t*) data_array, data_length/2, 1);
+                  get_constant((int32_t*) data_array, data_length/4, 1);
                   break;
                 default:
                   break;
               }
-              //ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
+              if (update){
+                ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
+              }
             }
 
             if (((timer_count % 50) == 0) && ((ecg_control >> 7) & 0x1)) {
@@ -820,7 +842,7 @@ int main(void)
     int32_t adc_value;
     int32_t filter_out;
     int32_t ecg_data;
-    uint32_t time_ms = 100; //Time(in miliseconds) between consecutive compare events.
+    uint32_t time_ms = 20; //Time(in miliseconds) between consecutive compare events.
     uint32_t time_ticks;
     uint32_t err_code = NRF_SUCCESS;
     int data_count;
@@ -891,7 +913,7 @@ int main(void)
     data_count = 0;
     time_ticks = 0;
     for (;;) {
-
+      NRF_LOG_FLUSH();
       while(1){
         __WFE();
         if (AdsNewData()) {
@@ -921,6 +943,15 @@ int main(void)
       pointer %= 1024;
 
       ecg_data = filter_out - (ma >> 10);
+      if (ecg_control & 0x1) {
+        if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
+          NRF_LOG_WARNING("ADS Buffer Overflow!");
+          NRF_LOG_FLUSH();
+        }
+      } 
+        
+//    ads_overflow = true;
+      /*
       data_buf[data_count] = ecg_data ;
       //data_buf[2*data_count+1] = (ecg_data & 0xff00) >> 8;
       data_count++;
@@ -932,7 +963,7 @@ int main(void)
  //       NRF_LOG_FLUSH();
       }
       //NRF_LOG_FLUSH();
-
+*/
       
     }
 }

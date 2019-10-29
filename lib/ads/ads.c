@@ -22,10 +22,6 @@ volatile bool spi_xfer_done;
 volatile bool ads_overflow;
 volatile bool ads_new_data;
 
-#define ADSBUFFER ads_buf
-#define ADSBUFFERDEPTH 1024
-CIRC_GBUF_DEF(int32_t, ADSBUFFER, ADSBUFFERDEPTH)
-
 void spi_event_handler(nrf_drv_spi_evt_t const *p_event,
     void *p_context) {
   spi_xfer_done = true;
@@ -195,10 +191,6 @@ void AdsSendCommand(ADS1x9xCommand_t command) {
   }
 
   return;
-}
-
-int32_t AdsGetDataCount() {
-  return ADSBUFFERDEPTH - CIRC_GBUF_FS(ADSBUFFER);
 }
 
 int32_t AdsGetData() {
