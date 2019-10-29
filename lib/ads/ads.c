@@ -114,9 +114,9 @@ bool AdsInit(const nrf_drv_spi_t spi, const ads_pins_t ads_pins) {
   // Shorts inputs
   //  AdsDebugWriteRegister(4, 0b00000001);
   // Normal Gain 6
-  AdsDebugWriteRegister(4, 0b00000000);
+  //AdsDebugWriteRegister(4, 0b00000000);
   // Normal Gain 12
-  //  AdsDebugWriteRegister(4, 0b01100000);
+  AdsDebugWriteRegister(4, 0b01100000);
   nrf_delay_ms(20);
 
   // Disables Channel 2
