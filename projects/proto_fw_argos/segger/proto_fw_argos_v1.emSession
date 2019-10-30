@@ -42,13 +42,14 @@
  </Watch4>
  <Files>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="119" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../integration/nrfx/legacy/nrf_drv_spi.h" selected="0" top="78" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="54" y="359" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/ble/ble_services/ble_ecg/ble_ecg.c" selected="0" top="341" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="40" y="58" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/ble/ble_services/ble_ecg/ble_ecg.c" selected="0" top="103" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="340" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/ble/common/ble_srv_common.h" selected="0" top="328" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="256" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/softdevice/s132/headers/ble_gatts.h" selected="0" top="235" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="219" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/softdevice/s132/headers/ble_gatt.h" selected="0" top="190" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="22" y="87" useTextEdit="1" useBinaryEdit="0" left="0" path="../src/main.c" selected="1" top="77" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="57" y="112" useTextEdit="1" useBinaryEdit="0" left="0" path="../src/main.c" selected="1" top="93" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/softdevice/s132/headers/ble.h" selected="0" top="651" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="107" y="213" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/ble/ble_services/ble_ecg/ble_ecg.h" selected="0" top="207" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="213" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/ble/ble_services/ble_ecg/ble_ecg.h" selected="0" top="207" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="88" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../components/ble/common/ble_conn_params.h" selected="0" top="67" codecName="Default"/>
  </Files>
- <ARMCrossStudioWindow activeProject="proto_fw_argos_v1" fileDialogDefaultFilter="*.h" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/home/andy/argos/ecg/nrf/repo/nRF5_SDK_15.3.0_59ac345/components/ble/ble_services/ble_ecg" debugSearchPath="" autoConnectCapabilities="3199"/>
+ <ARMCrossStudioWindow activeProject="proto_fw_argos_v1" fileDialogDefaultFilter="*.h" autoConnectTarget="J-Link" buildConfiguration="Release" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="/home/andy/argos/ecg/nrf/repo/nRF5_SDK_15.3.0_59ac345/components/ble/ble_services/ble_ecg" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>
