@@ -89,7 +89,7 @@
     </folder>
     <folder Name="Application">
       <file file_name="../../../dfu_public_key.c" />
-      <file file_name="../../main.c" />
+      <file file_name="../src/main.c" />
       <file file_name="../config/sdk_config.h" />
     </folder>
     <folder Name="nRF_micro-ecc">
