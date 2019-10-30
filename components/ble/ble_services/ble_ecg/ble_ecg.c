@@ -331,22 +331,22 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint
         return err_code;
     }
 
-    uint32_t id = 0x12345678;
-    memset(&add_char_params, 0, sizeof(add_char_params)); 
-    add_char_params.uuid                     = BLE_UUID_ECG_ID_CHARACTERISTIC;
+    // Add the Control Characteristic.
+    memset(&add_char_params, 0, sizeof(add_char_params));
+    add_char_params.uuid                     = BLE_UUID_ECG_CONTROL_CHARACTERISTIC;
     add_char_params.uuid_type                = p_nus->uuid_type;
-    add_char_params.p_init_value             = (uint8_t*)&id;
+    add_char_params.p_init_value             = (uint8_t*)&control;
     add_char_params.max_len                  = sizeof(uint32_t);
     add_char_params.init_len                 = sizeof(uint32_t);
     add_char_params.is_var_len               = false;
     add_char_params.char_props.read          = 1;
-    add_char_params.char_props.write         = 0;
-    add_char_params.char_props.write_wo_resp = 0;
+    add_char_params.char_props.write         = 1;
+    add_char_params.char_props.write_wo_resp = 1;
 
     add_char_params.read_access  = SEC_OPEN;
     add_char_params.write_access = SEC_OPEN;
 
-    err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->version_handles);
+    err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->rx_handles);
     if (err_code != NRF_SUCCESS)
     {
         return err_code;
@@ -373,6 +373,27 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint
         return err_code;
     }
 
+    uint32_t id = 0x12345678;
+    memset(&add_char_params, 0, sizeof(add_char_params)); 
+    add_char_params.uuid                     = BLE_UUID_ECG_ID_CHARACTERISTIC;
+    add_char_params.uuid_type                = p_nus->uuid_type;
+    add_char_params.p_init_value             = (uint8_t*)&id;
+    add_char_params.max_len                  = sizeof(uint32_t);
+    add_char_params.init_len                 = sizeof(uint32_t);
+    add_char_params.is_var_len               = false;
+    add_char_params.char_props.read          = 1;
+    add_char_params.char_props.write         = 0;
+    add_char_params.char_props.write_wo_resp = 0;
+
+    add_char_params.read_access  = SEC_OPEN;
+    add_char_params.write_access = SEC_OPEN;
+
+    err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->version_handles);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
     uint32_t status = 0;
     memset(&add_char_params, 0, sizeof(add_char_params));
     add_char_params.uuid                     = BLE_UUID_ECG_STATUS_CHARACTERISTIC;
@@ -389,27 +410,6 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint
     add_char_params.write_access = SEC_OPEN;
 
     err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->status_handles);
-    if (err_code != NRF_SUCCESS)
-    {
-        return err_code;
-    }
-
-    // Add the Control Characteristic.
-    memset(&add_char_params, 0, sizeof(add_char_params));
-    add_char_params.uuid                     = BLE_UUID_ECG_CONTROL_CHARACTERISTIC;
-    add_char_params.uuid_type                = p_nus->uuid_type;
-    add_char_params.p_init_value             = (uint8_t*)&control;
-    add_char_params.max_len                  = sizeof(uint32_t);
-    add_char_params.init_len                 = sizeof(uint32_t);
-    add_char_params.is_var_len               = false;
-    add_char_params.char_props.read          = 1;
-    add_char_params.char_props.write         = 1;
-    add_char_params.char_props.write_wo_resp = 1;
-
-    add_char_params.read_access  = SEC_OPEN;
-    add_char_params.write_access = SEC_OPEN;
-
-    err_code = characteristic_add(p_nus->service_handle, &add_char_params, &p_nus->rx_handles);
     if (err_code != NRF_SUCCESS)
     {
         return err_code;

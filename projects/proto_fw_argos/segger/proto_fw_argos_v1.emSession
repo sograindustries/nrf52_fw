@@ -41,7 +41,7 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="23" y="1095" useTextEdit="1" useBinaryEdit="0" left="0" path="../src/main.c" selected="1" top="1077" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="885" useTextEdit="1" useBinaryEdit="0" left="0" path="../src/main.c" selected="1" top="866" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="346" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../examples/peripheral/spi/main.c" selected="0" top="336" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="119" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../integration/nrfx/legacy/nrf_drv_spi.h" selected="0" top="78" codecName="Default"/>
  </Files>
