@@ -211,7 +211,7 @@ struct ble_nus_s
  * @retval NRF_SUCCESS If the service was successfully initialized. Otherwise, an error code is returned.
  * @retval NRF_ERROR_NULL If either of the pointers p_nus or p_nus_init is NULL.
  */
-uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint32_t control);
+uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint32_t control, const char * version, int ver_len);
 
 
 /**@brief   Function for handling the Nordic UART Service's BLE events.

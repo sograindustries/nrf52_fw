@@ -281,7 +281,7 @@ void ble_nus_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
 }
 
 
-uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint32_t control)
+uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint32_t control, const char * version, int ver_len)
 {
     ret_code_t            err_code;
     ble_uuid_t            ble_uuid;
@@ -352,13 +352,12 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint
         return err_code;
     }
 
-    uint32_t kVersion = FW_VERSION;
     memset(&add_char_params, 0, sizeof(add_char_params));
     add_char_params.uuid                     = BLE_UUID_ECG_VERSION_CHARACTERISTIC;
     add_char_params.uuid_type                = p_nus->uuid_type;
-    add_char_params.p_init_value             = (uint8_t*)&kVersion;
-    add_char_params.max_len                  = sizeof(uint32_t);
-    add_char_params.init_len                 = sizeof(uint32_t);
+    add_char_params.p_init_value             = (uint8_t*)version;
+    add_char_params.max_len                  = ver_len;
+    add_char_params.init_len                 = ver_len;
     add_char_params.is_var_len               = false;
     add_char_params.char_props.read          = 1;
     add_char_params.char_props.write         = 0;
