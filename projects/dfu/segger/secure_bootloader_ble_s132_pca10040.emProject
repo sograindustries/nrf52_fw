@@ -88,7 +88,7 @@
       <file file_name="../../../components/libraries/crypto/nrf_crypto_shared.c" />
     </folder>
     <folder Name="Application">
-      <file file_name="../../../dfu_public_key.c" />
+      <file file_name="../src/public_key.c" />
       <file file_name="../src/main.c" />
       <file file_name="../config/sdk_config.h" />
     </folder>
@@ -151,6 +151,7 @@
     </folder>
   </project>
   <configuration Name="Release"
+    batch_build_configurations="Release"             
     c_preprocessor_definitions="NDEBUG"
     gcc_optimization_level="Optimize For Size" />
 </solution>
