@@ -13,7 +13,7 @@ jobs:
 
     - run: mkdir -p artifacts
 
-    - run: docker run -v $PWD/artifacts:/tmp  lifecandid/gourmetplate:build_image ${{ secrets.TEST_SEC }} sograindustries/nrf52_fw.git ${GITHUB_SHA} Release projects/argos_dfu/segger/argos_dfu.emProject /repo/projects/argos_dfu/segger/Output/Release/Exe/argos_dfu.hex /tmp/ ./projects/proto_fw_argos/scripts/generate_package.sh
+    - run: docker run -v $PWD/artifacts:/tmp  lifecandid/gourmetplate:build_image ${{ secrets.TEST_SEC }} sograindustries/nrf52_fw.git ${GITHUB_SHA} Release projects/argos_dfu/segger/argos_dfu.emProject /repo/projects/argos_dfu/segger/Output/Release/Exe/argos_dfu.hex /tmp/ 
 
     - run: cp "${GITHUB_WORKSPACE}/components/softdevice/s132/hex/s132_nrf52_6.1.1_softdevice.hex" artifacts
 
