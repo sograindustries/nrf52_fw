@@ -23,6 +23,6 @@ jobs:
 
     - uses: actions/upload-artifact@master
       with:
-        name: "argos_hex_outputs"
+        name: "argos_dfu_hex_outputs"
         path: artifacts
 
