@@ -1,0 +1,6 @@
+[submodule "external/micro-ecc/--force"]
+	path = external/micro-ecc/--force
+	url = git@github.com:sograindustries/micro-ecc.git
+[submodule "external/micro-ecc/micro-ecc"]
+	path = external/micro-ecc/micro-ecc
+	url = git@github.com:sograindustries/micro-ecc.git
