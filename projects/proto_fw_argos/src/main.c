@@ -353,8 +353,17 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
           return;
 
         ecg_control = *((uint32_t*)p_evt->params.rx_data.p_data);
+        if (ecg_control & (1<<8)) {
+          NRF_LOG_DEBUG("Entering DFU Mode!");
+          NRF_LOG_FLUSH();
+          sd_power_gpregret_clr(0, 0xff);                                 
+          sd_power_gpregret_set(0, 0xB1);
+          NVIC_SystemReset();
+        }
 //        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
         ble_ecg_control_set(&m_nus, m_conn_handle, ecg_control);
+
+        
       
         // Updates LEDs
         update_led( (ecg_control >> 3) & 0xf);
@@ -856,6 +865,7 @@ int main(void)
 
     
     // Initialize.
+    sd_power_gpregret_clr(0, 0xff); 
     uart_init();
     log_init();
     timers_init();
