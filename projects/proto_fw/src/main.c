@@ -81,6 +81,8 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+const char version[] = COMMIT_HASH;
+
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
 #define DEVICE_NAME                     "ARGOS_ECG"                               /**< Name of device. Will be included in the advertising data. */
@@ -349,7 +351,7 @@ static void services_init(void)
 
     nus_init.data_handler = nus_data_handler;
 
-    err_code = ble_nus_init(&m_nus, &nus_init, ecg_control);
+    err_code = ble_nus_init(&m_nus, &nus_init, ecg_control, version, sizeof(version)-1);
     APP_ERROR_CHECK(err_code);
 }
 

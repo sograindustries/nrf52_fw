@@ -129,7 +129,7 @@
   </project>
   <configuration
     Name="Release"
-    c_preprocessor_definitions="NDEBUG"
+    c_preprocessor_definitions="NDEBUG;COMMIT_HASH=$(EXT_COMMIT_HASH:&quot;NOT_A_CI_BUILD&quot;)"
     gcc_optimization_level="Optimize For Size" />
   <configuration
     Name="Debug"

@@ -273,8 +273,12 @@ void ble_nus_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
             NRF_LOG_DEBUG("evt_hvn_tx_complete");
             on_hvx_tx_complete(p_nus, p_ble_evt);
             break;
-
+        case BLE_GAP_EVT_CONN_PARAM_UPDATE:
+            NRF_LOG_DEBUG("Conn Param Update!");
+            sd_ble_gap_conn_param_update(p_ble_evt->evt.gap_evt.conn_handle, &p_ble_evt->evt.gap_evt.params.conn_param_update);
+            break;
         default:
+            NRF_LOG_DEBUG("Unknown Event: %d", p_ble_evt->header.evt_id);
             // No implementation needed.
             break;
     }
