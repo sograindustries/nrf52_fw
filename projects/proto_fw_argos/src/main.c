@@ -894,7 +894,7 @@ int main(void)
 
     // Start execution.
     printf("\r\nUART started.\r\n");
-    NRF_LOG_INFO("Debug logging for UART over RTT started 03.");
+    NRF_LOG_INFO("Debug logging for UART over RTT started 04.");
     NRF_LOG_FLUSH();
 
     LPFilter_init(&filter);
