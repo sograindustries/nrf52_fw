@@ -7,27 +7,26 @@ extern "C" {
 
 #include "nrf_gpio.h"
 
-#define LEDS_NUMBER    3
+#define LEDS_NUMBER    2
 
-#define LED_START      13
-#define LED_1          13
-#define LED_2          14
-#define LED_3          15
-#define LED_STOP       15
+#define LED_START      25
+#define LED_1          25
+#define LED_2          23
+#define LED_STOP       23
 
 #define LEDS_ACTIVE_STATE 0
 
 #define LEDS_INV_MASK  LEDS_MASK
 
-#define LEDS_LIST { LED_1, LED_2, LED_3 }
+#define LEDS_LIST { LED_1, LED_2 }
 
 #define BSP_LED_0      LED_1
 #define BSP_LED_1      LED_2
-#define BSP_LED_2      LED_3
+  //#define BSP_LED_2      LED_3
   // #define BSP_LED_3      LED_3
 
 #define RX_PIN_NUMBER  26
-#define TX_PIN_NUMBER  25
+#define TX_PIN_NUMBER  27
 #define CTS_PIN_NUMBER 7
 #define RTS_PIN_NUMBER 5
 #define HWFC           false
@@ -48,13 +47,13 @@ extern "C" {
 
 #define BSP_BUTTON_0   BUTTON_1
 
-#define ADS_MISO_PIN   4 
-#define ADS_CSN_PIN    7 
-#define ADS_MOSI_PIN   6 
-#define ADS_SCK_PIN    5 
-#define ADS_RST_PIN    10
-#define ADS_DRDY_PIN   3
-#define ADS_START_PIN  9
+#define ADS_MISO_PIN   3 
+#define ADS_CSN_PIN    16 
+#define ADS_MOSI_PIN   7 
+#define ADS_SCK_PIN    4 
+#define ADS_RST_PIN    9
+#define ADS_DRDY_PIN   8
+#define ADS_START_PIN  12
 #define ADS_CLKSEL_PIN 11
   
 
