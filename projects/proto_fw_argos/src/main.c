@@ -208,9 +208,9 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 {
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
   
-    // 1 uint32 packet count, 30 int32 samples
+    // 1 uint32 packet count, 1 byte status, 30 int32 samples
     const int kNumSamples = 30;
-    const uint16_t data_length = sizeof(uint32_t) + sizeof(int32_t)*kNumSamples;
+    const uint16_t data_length = sizeof(uint32_t) + sizeof(int32_t)*kNumSamples + 1;
     static uint8_t index = 10;
     uint32_t           err_code;
     static uint32_t timer_count = 0;
@@ -225,8 +225,9 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
     int16_t ble_arrhythmia_size = sizeof(ble_arrhythmia);
     update = true;
 
-    data_array_ptr = (int32_t*) (data_array + sizeof(uint32_t));
+    data_array_ptr = (int32_t*) (data_array + sizeof(uint32_t) + 1);
     *((uint32_t*)data_array) = packet_count;
+    data_array[4] = 0;
     switch (event_type)
     {
         case NRF_TIMER_EVENT_COMPARE1:
