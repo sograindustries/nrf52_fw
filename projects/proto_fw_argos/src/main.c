@@ -926,6 +926,9 @@ int main(void)
       NRF_LOG_FLUSH();
       while(1);
     }
+  
+    NRF_LOG_INFO("DEVICEID0: %08X", NRF_FICR->DEVICEID[0]);
+    NRF_LOG_INFO("DEVICEID1: %08X", NRF_FICR->DEVICEID[1]);
 
     advertising_start();
     //while (nrf_gpio_pin_read(ADS_DRDY_PIN) == 0)

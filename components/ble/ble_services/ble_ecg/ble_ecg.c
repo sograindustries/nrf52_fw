@@ -376,13 +376,13 @@ uint32_t ble_nus_init(ble_nus_t * p_nus, ble_nus_init_t const * p_nus_init, uint
         return err_code;
     }
 
-    uint32_t id = 0x12345678;
+    uint64_t id =  ((uint64_t)NRF_FICR->DEVICEID[0]) + (((uint64_t)NRF_FICR->DEVICEID[1])<<32);
     memset(&add_char_params, 0, sizeof(add_char_params)); 
     add_char_params.uuid                     = BLE_UUID_ECG_ID_CHARACTERISTIC;
     add_char_params.uuid_type                = p_nus->uuid_type;
     add_char_params.p_init_value             = (uint8_t*)&id;
-    add_char_params.max_len                  = sizeof(uint32_t);
-    add_char_params.init_len                 = sizeof(uint32_t);
+    add_char_params.max_len                  = sizeof(uint64_t);
+    add_char_params.init_len                 = sizeof(uint64_t);
     add_char_params.is_var_len               = false;
     add_char_params.char_props.read          = 1;
     add_char_params.char_props.write         = 0;
