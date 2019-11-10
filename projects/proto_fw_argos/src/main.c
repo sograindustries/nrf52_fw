@@ -207,7 +207,10 @@ void update_led(uint8_t mask) {
 void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 {
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
-    const uint16_t data_length = 120;
+  
+    // 1 uint32 packet count, 1 byte status, 30 int32 samples
+    const int kNumSamples = 30;
+    const uint16_t data_length = sizeof(uint32_t) + sizeof(int32_t)*kNumSamples + 1;
     static uint8_t index = 10;
     uint32_t           err_code;
     static uint32_t timer_count = 0;
@@ -215,9 +218,16 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
     int timer_count_size = sizeof(timer_count);
     bool update;
 
+    static uint32_t packet_count =0;
+    uint32_t * data_array_ptr;
+
     ble_arrhythmia_s ble_arrhythmia;
     int16_t ble_arrhythmia_size = sizeof(ble_arrhythmia);
     update = true;
+
+    data_array_ptr = (int32_t*) (data_array + sizeof(uint32_t) + 1);
+    *((uint32_t*)data_array) = packet_count;
+    data_array[4] = 0;
     switch (event_type)
     {
         case NRF_TIMER_EVENT_COMPARE1:
@@ -229,22 +239,23 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
             if (ecg_control & 0x1) {
               switch ((ecg_control >> 1) & 0x3) {
                 case 0:
-                  get_ramp((int32_t*) data_array, data_length/4);
+                  get_ramp(data_array_ptr, kNumSamples);
                   break;
                 case 1:
-                  update = get_ads_data((int32_t*) data_array, data_length/4);
+                  update = get_ads_data(data_array_ptr, kNumSamples);
                   break;
                 case 2:
-                  get_mock_normal_adc((int32_t*) data_array, data_length/4);
+                  get_mock_normal_adc(data_array_ptr, kNumSamples);
                   break;
                 case 3:
-                  get_constant((int32_t*) data_array, data_length/4, 1);
+                  get_constant(data_array_ptr, kNumSamples, 1);
                   break;
                 default:
                   break;
               }
               if (update){
                 ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
+                ++packet_count;
               }
             }
 
@@ -915,6 +926,9 @@ int main(void)
       NRF_LOG_FLUSH();
       while(1);
     }
+  
+    NRF_LOG_INFO("DEVICEID0: %08X", NRF_FICR->DEVICEID[0]);
+    NRF_LOG_INFO("DEVICEID1: %08X", NRF_FICR->DEVICEID[1]);
 
     advertising_start();
     //while (nrf_gpio_pin_read(ADS_DRDY_PIN) == 0)
