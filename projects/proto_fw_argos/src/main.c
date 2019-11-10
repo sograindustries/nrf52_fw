@@ -159,7 +159,6 @@ bool get_ads_data(int32_t* data, int length){
   int data_count;
   // Checks if we have enough data in the queue.
   data_count = ADSBUFFERDEPTH - CIRC_GBUF_FS(ADSBUFFER);
-  NRF_LOG_DEBUG("Data Count: %d", data_count);
   if(data_count < length && data_count > 0)
     return false;
 
@@ -967,10 +966,10 @@ int main(void)
       pointer++;
       pointer %= 1024;
 
-      ecg_data = filter_out - (ma >> 10);
+      ecg_data = filter_out;
       if (ecg_control & 0x1) {
         if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
-          NRF_LOG_WARNING("ADS Buffer Overflow!");
+          NRF_LOG_ERROR("ADS Buffer Overflow!");
           NRF_LOG_FLUSH();
         }
       } 
