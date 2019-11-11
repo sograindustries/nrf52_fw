@@ -968,9 +968,17 @@ int main(void)
 
       ecg_data = filter_out;
       if (ecg_control & 0x1) {
-        if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
-          NRF_LOG_ERROR("ADS Buffer Overflow!");
-          NRF_LOG_FLUSH();
+        if (ecg_control & 0x200) {
+          if(CIRC_GBUF_PUSH(ADSBUFFER,&adc_value)){
+           NRF_LOG_DEBUG("no_filt");
+           NRF_LOG_ERROR("ADS Buffer Overflow!");
+           NRF_LOG_FLUSH();
+        }
+        } else {
+          if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
+            NRF_LOG_ERROR("ADS Buffer Overflow!");
+           NRF_LOG_FLUSH();
+        }
         }
       } 
         
