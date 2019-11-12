@@ -159,7 +159,6 @@ bool get_ads_data(int32_t* data, int length){
   int data_count;
   // Checks if we have enough data in the queue.
   data_count = ADSBUFFERDEPTH - CIRC_GBUF_FS(ADSBUFFER);
-  NRF_LOG_DEBUG("Data Count: %d", data_count);
   if(data_count < length && data_count > 0)
     return false;
 
@@ -874,6 +873,12 @@ int main(void)
     ads_pins_t ads_pins;
     nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(0);  /**< SPI instance. */
 
+    // HP IIR Filter Definition
+    float hp_num[3] = {0.99835013, -1.99670027,  0.99835013};
+    float hp_den[2] = {-1.99692777,  0.99693255};
+    int num_d[2] = {0, 0};
+    int den_d[2] = {0, 0};
+    int hp_out;
     
     // Initialize.
     sd_power_gpregret_clr(0, 0xff); 
@@ -958,7 +963,18 @@ int main(void)
 */
       adc_value = AdsGetData();
 
-      LPFilter_put(&filter, adc_value);
+      // Passes through the HP filter
+      hp_out = hp_num[0] * adc_value + 
+               hp_num[1] * num_d[0] + 
+               hp_num[2] * num_d[1] -
+               hp_den[0] * den_d[0] -
+               hp_den[1] * den_d[1];
+      num_d[1] = num_d[0];
+      num_d[0] = adc_value;
+      den_d[1] = den_d[0];
+      den_d[0] = hp_out;
+
+      LPFilter_put(&filter, hp_out);
       filter_out = LPFilter_get(&filter);
       //filter_out = adc_value;
       ma += filter_out;
@@ -967,11 +983,19 @@ int main(void)
       pointer++;
       pointer %= 1024;
 
-      ecg_data = filter_out - (ma >> 10);
+      ecg_data = filter_out;
       if (ecg_control & 0x1) {
-        if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
-          NRF_LOG_WARNING("ADS Buffer Overflow!");
-          NRF_LOG_FLUSH();
+        if (ecg_control & 0x200) {
+          if(CIRC_GBUF_PUSH(ADSBUFFER,&adc_value)){
+           NRF_LOG_DEBUG("no_filt");
+           NRF_LOG_ERROR("ADS Buffer Overflow!");
+           NRF_LOG_FLUSH();
+        }
+        } else {
+          if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
+            NRF_LOG_ERROR("ADS Buffer Overflow!");
+           NRF_LOG_FLUSH();
+        }
         }
       } 
         
