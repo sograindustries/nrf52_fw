@@ -882,7 +882,7 @@ int main(void)
       } else {
         filter_enable = true;
       }
-      }
+      
       if (ecg_control & 0x1) {
         if (filter_enable) {
           if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
