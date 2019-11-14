@@ -93,9 +93,10 @@ const char version[] = COMMIT_HASH;
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 
-#define APP_ADV_INTERVAL                64                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
-
-#define APP_ADV_DURATION                18000                                       /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
+#define APP_ADV_INTERVAL                160 // 100ms                                          
+#define APP_ADV_DURATION                18000  // 20 Minutes
+#define APP_ADV_INTERVAL_SLOW           1600
+#define APP_ADV_DURATION_SLOW           120000
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(75, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
@@ -111,10 +112,6 @@ const char version[] = COMMIT_HASH;
 #define ABNORMAL_ADC_SAMPLES 6260
 extern const int16_t mock_normal_data[NORMAL_ADC_SAMPLES];
 extern const int16_t mock_abnormal_data[ABNORMAL_ADC_SAMPLES];
-
-int32_t data[1024];
-int pointer = 0;
-int ma = 0;
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
@@ -413,7 +410,7 @@ static void services_init(void)
 static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     uint32_t err_code;
-
+    NRF_LOG_DEBUG("Connection Event");
     if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
@@ -681,6 +678,9 @@ static void advertising_init(void)
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
     init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
+    init.config.ble_adv_slow_enabled  = true;
+    init.config.ble_adv_slow_interval = APP_ADV_INTERVAL_SLOW;
+    init.config.ble_adv_slow_timeout  = APP_ADV_DURATION_SLOW;
     init.evt_handler = on_adv_evt;
 
     err_code = ble_advertising_init(&m_advertising, &init);
@@ -872,13 +872,6 @@ int main(void)
 
       LPFilter_put(&filter, hp_out);
       filter_out = LPFilter_get(&filter);
-      //filter_out = adc_value;
-      ma += filter_out;
-      ma -= data[pointer];
-      data[pointer] = filter_out;
-      pointer++;
-      pointer %= 1024;
-
       ecg_data = filter_out;
       if (ecg_control & 0x1) {
         if (ecg_control & 0x200) {
