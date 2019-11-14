@@ -94,7 +94,7 @@ const char version[] = COMMIT_HASH;
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 
 #define APP_ADV_INTERVAL                160 // 100ms                                          
-#define APP_ADV_DURATION                18000  // 20 Minutes
+#define APP_ADV_DURATION                0  // Infinite
 #define APP_ADV_INTERVAL_SLOW           1600
 #define APP_ADV_DURATION_SLOW           120000
 
@@ -126,6 +126,7 @@ static ble_uuid_t m_adv_uuids[]          =                                      
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
 
+bool filter_enable = true;
 #define ADSBUFFER ads_buf
 #define ADSBUFFERDEPTH 1024
 CIRC_GBUF_DEF(int32_t, ADSBUFFER, ADSBUFFERDEPTH)
@@ -212,7 +213,9 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 
     data_array_ptr = (int32_t*) (data_array + sizeof(uint32_t) + 1);
     *((uint32_t*)data_array) = packet_count;
-    data_array[4] = 0;
+
+    // Populates status bit
+    data_array[4] = filter_enable ? 0 : 1;
     switch (event_type)
     {
         case NRF_TIMER_EVENT_COMPARE1:
@@ -670,7 +673,8 @@ static void advertising_init(void)
 
     init.advdata.name_type          = BLE_ADVDATA_FULL_NAME;
     init.advdata.include_appearance = false;
-    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+//    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE
+    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
     init.srdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     init.srdata.uuids_complete.p_uuids  = m_adv_uuids;
@@ -678,7 +682,7 @@ static void advertising_init(void)
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
     init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
-    init.config.ble_adv_slow_enabled  = true;
+    init.config.ble_adv_slow_enabled  = false;
     init.config.ble_adv_slow_interval = APP_ADV_INTERVAL_SLOW;
     init.config.ble_adv_slow_timeout  = APP_ADV_DURATION_SLOW;
     init.evt_handler = on_adv_evt;
@@ -871,17 +875,19 @@ int main(void)
       den_d[0] = hp_out;
 
       LPFilter_put(&filter, hp_out);
-      filter_out = LPFilter_get(&filter);
-      ecg_data = filter_out;
+      ecg_data = LPFilter_get(&filter);
+
+      if (ecg_control & 0x200) {
+        filter_enable = false;
+      }
       if (ecg_control & 0x1) {
-        if (ecg_control & 0x200) {
-          if(CIRC_GBUF_PUSH(ADSBUFFER,&adc_value)){
-           NRF_LOG_DEBUG("no_filt");
+        if (filter_enable) {
+          if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
            NRF_LOG_ERROR("ADS Buffer Overflow!");
            NRF_LOG_FLUSH();
         }
         } else {
-          if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
+          if(CIRC_GBUF_PUSH(ADSBUFFER,&adc_value)){
             NRF_LOG_ERROR("ADS Buffer Overflow!");
            NRF_LOG_FLUSH();
         }
