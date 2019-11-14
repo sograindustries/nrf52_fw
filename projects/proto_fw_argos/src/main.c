@@ -879,6 +879,9 @@ int main(void)
 
       if (ecg_control & 0x200) {
         filter_enable = false;
+      } else {
+        filter_enable = true;
+      }
       }
       if (ecg_control & 0x1) {
         if (filter_enable) {
