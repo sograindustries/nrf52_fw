@@ -65,7 +65,6 @@
 #include "nrf_ble_qwr.h"
 #include "app_timer.h"
 #include "ble_ecg.h"
-#include "app_uart.h"
 #include "app_util_platform.h"
 #include "bsp.h"
 #include "boards.h"
@@ -81,13 +80,6 @@
 #include "lib/ads/ads.h"
 #include "lib/circbuf/circbuf.h"
 
-#if defined (UART_PRESENT)
-#include "nrf_uart.h"
-#endif
-#if defined (UARTE_PRESENT)
-#include "nrf_uarte.h"
-#endif
-
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
@@ -101,9 +93,10 @@ const char version[] = COMMIT_HASH;
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 
-#define APP_ADV_INTERVAL                64                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
-
-#define APP_ADV_DURATION                18000                                       /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
+#define APP_ADV_INTERVAL                160 // 100ms                                          
+#define APP_ADV_DURATION                0  // Infinite
+#define APP_ADV_INTERVAL_SLOW           1600
+#define APP_ADV_DURATION_SLOW           120000
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(75, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
@@ -115,17 +108,10 @@ const char version[] = COMMIT_HASH;
 
 #define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
-#define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
-
 #define NORMAL_ADC_SAMPLES 7000
 #define ABNORMAL_ADC_SAMPLES 6260
 extern const int16_t mock_normal_data[NORMAL_ADC_SAMPLES];
 extern const int16_t mock_abnormal_data[ABNORMAL_ADC_SAMPLES];
-
-int32_t data[1024];
-int pointer = 0;
-int ma = 0;
 
 BLE_NUS_DEF(m_nus, NRF_SDH_BLE_TOTAL_LINK_COUNT);                                   /**< BLE NUS service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
@@ -140,6 +126,7 @@ static ble_uuid_t m_adv_uuids[]          =                                      
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
 
+bool filter_enable = true;
 #define ADSBUFFER ads_buf
 #define ADSBUFFERDEPTH 1024
 CIRC_GBUF_DEF(int32_t, ADSBUFFER, ADSBUFFERDEPTH)
@@ -159,7 +146,6 @@ bool get_ads_data(int32_t* data, int length){
   int data_count;
   // Checks if we have enough data in the queue.
   data_count = ADSBUFFERDEPTH - CIRC_GBUF_FS(ADSBUFFER);
-  NRF_LOG_DEBUG("Data Count: %d", data_count);
   if(data_count < length && data_count > 0)
     return false;
 
@@ -207,7 +193,10 @@ void update_led(uint8_t mask) {
 void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 {
     static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
-    const uint16_t data_length = 120;
+  
+    // 1 uint32 packet count, 1 byte status, 30 int32 samples
+    const int kNumSamples = 30;
+    const uint16_t data_length = sizeof(uint32_t) + sizeof(int32_t)*kNumSamples + 1;
     static uint8_t index = 10;
     uint32_t           err_code;
     static uint32_t timer_count = 0;
@@ -215,9 +204,18 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
     int timer_count_size = sizeof(timer_count);
     bool update;
 
+    static uint32_t packet_count =0;
+    uint32_t * data_array_ptr;
+
     ble_arrhythmia_s ble_arrhythmia;
     int16_t ble_arrhythmia_size = sizeof(ble_arrhythmia);
     update = true;
+
+    data_array_ptr = (int32_t*) (data_array + sizeof(uint32_t) + 1);
+    *((uint32_t*)data_array) = packet_count;
+
+    // Populates status bit
+    data_array[4] = filter_enable ? 0 : 1;
     switch (event_type)
     {
         case NRF_TIMER_EVENT_COMPARE1:
@@ -229,22 +227,23 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
             if (ecg_control & 0x1) {
               switch ((ecg_control >> 1) & 0x3) {
                 case 0:
-                  get_ramp((int32_t*) data_array, data_length/4);
+                  get_ramp(data_array_ptr, kNumSamples);
                   break;
                 case 1:
-                  update = get_ads_data((int32_t*) data_array, data_length/4);
+                  update = get_ads_data(data_array_ptr, kNumSamples);
                   break;
                 case 2:
-                  get_mock_normal_adc((int32_t*) data_array, data_length/4);
+                  get_mock_normal_adc(data_array_ptr, kNumSamples);
                   break;
                 case 3:
-                  get_constant((int32_t*) data_array, data_length/4, 1);
+                  get_constant(data_array_ptr, kNumSamples, 1);
                   break;
                 default:
                   break;
               }
               if (update){
                 ble_nus_data_send(&m_nus, data_array, &data_length, m_conn_handle);
+                ++packet_count;
               }
             }
 
@@ -414,7 +413,7 @@ static void services_init(void)
 static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     uint32_t err_code;
-
+    NRF_LOG_DEBUG("Connection Event");
     if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
@@ -662,97 +661,6 @@ void bsp_event_handler(bsp_event_t event)
 }
 
 
-/**@brief   Function for handling app_uart events.
- *
- * @details This function will receive a single character from the app_uart module and append it to
- *          a string. The string will be be sent over BLE when the last character received was a
- *          'new line' '\n' (hex 0x0A) or if the string has reached the maximum data length.
- */
-/**@snippet [Handling the data received over UART] */
-void uart_event_handle(app_uart_evt_t * p_event)
-{
-    static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
-    static uint8_t index = 0;
-    uint32_t       err_code;
-
-    switch (p_event->evt_type)
-    {
-        case APP_UART_DATA_READY:
-            UNUSED_VARIABLE(app_uart_get(&data_array[index]));
-            index++;
-
-            if ((data_array[index - 1] == '\n') ||
-                (data_array[index - 1] == '\r') ||
-                (index >= m_ble_nus_max_data_len))
-            {
-                if (index > 1)
-                {
-                    NRF_LOG_DEBUG("Ready to send data over BLE NUS");
-                    NRF_LOG_HEXDUMP_DEBUG(data_array, index);
-
-                    do
-                    {
-                        uint16_t length = (uint16_t)index;
-                        err_code = ble_nus_data_send(&m_nus, data_array, &length, m_conn_handle);
-                        if ((err_code != NRF_ERROR_INVALID_STATE) &&
-                            (err_code != NRF_ERROR_RESOURCES) &&
-                            (err_code != NRF_ERROR_NOT_FOUND))
-                        {
-                            APP_ERROR_CHECK(err_code);
-                        }
-                    } while (err_code == NRF_ERROR_RESOURCES);
-                }
-
-                index = 0;
-            }
-            break;
-
-        case APP_UART_COMMUNICATION_ERROR:
-            APP_ERROR_HANDLER(p_event->data.error_communication);
-            break;
-
-        case APP_UART_FIFO_ERROR:
-            APP_ERROR_HANDLER(p_event->data.error_code);
-            break;
-
-        default:
-            break;
-    }
-}
-/**@snippet [Handling the data received over UART] */
-
-
-/**@brief  Function for initializing the UART module.
- */
-/**@snippet [UART Initialization] */
-static void uart_init(void)
-{
-    uint32_t                     err_code;
-    app_uart_comm_params_t const comm_params =
-    {
-        .rx_pin_no    = RX_PIN_NUMBER,
-        .tx_pin_no    = TX_PIN_NUMBER,
-        .rts_pin_no   = RTS_PIN_NUMBER,
-        .cts_pin_no   = CTS_PIN_NUMBER,
-        .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
-        .use_parity   = false,
-#if defined (UART_PRESENT)
-        .baud_rate    = NRF_UART_BAUDRATE_115200
-#else
-        .baud_rate    = NRF_UARTE_BAUDRATE_115200
-#endif
-    };
-
-    APP_UART_FIFO_INIT(&comm_params,
-                       UART_RX_BUF_SIZE,
-                       UART_TX_BUF_SIZE,
-                       uart_event_handle,
-                       APP_IRQ_PRIORITY_LOWEST,
-                       err_code);
-    APP_ERROR_CHECK(err_code);
-}
-/**@snippet [UART Initialization] */
-
 
 /**@brief Function for initializing the Advertising functionality.
  */
@@ -765,7 +673,8 @@ static void advertising_init(void)
 
     init.advdata.name_type          = BLE_ADVDATA_FULL_NAME;
     init.advdata.include_appearance = false;
-    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+//    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE
+    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
     init.srdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     init.srdata.uuids_complete.p_uuids  = m_adv_uuids;
@@ -773,6 +682,9 @@ static void advertising_init(void)
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
     init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
+    init.config.ble_adv_slow_enabled  = false;
+    init.config.ble_adv_slow_interval = APP_ADV_INTERVAL_SLOW;
+    init.config.ble_adv_slow_timeout  = APP_ADV_DURATION_SLOW;
     init.evt_handler = on_adv_evt;
 
     err_code = ble_advertising_init(&m_advertising, &init);
@@ -863,10 +775,15 @@ int main(void)
     ads_pins_t ads_pins;
     nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(0);  /**< SPI instance. */
 
+    // HP IIR Filter Definition
+    float hp_num[3] = {0.99835013, -1.99670027,  0.99835013};
+    float hp_den[2] = {-1.99692777,  0.99693255};
+    int num_d[2] = {0, 0};
+    int den_d[2] = {0, 0};
+    int hp_out;
     
     // Initialize.
     sd_power_gpregret_clr(0, 0xff); 
-    uart_init();
     log_init();
     timers_init();
     buttons_leds_init(&erase_bonds);
@@ -893,8 +810,7 @@ int main(void)
     nrf_drv_timer_enable(&TIMER_LED);
 
     // Start execution.
-    printf("\r\nUART started.\r\n");
-    NRF_LOG_INFO("Debug logging for UART over RTT started 04.");
+    NRF_LOG_INFO("Argos Proto Dev FW");
     NRF_LOG_FLUSH();
 
     LPFilter_init(&filter);
@@ -915,6 +831,9 @@ int main(void)
       NRF_LOG_FLUSH();
       while(1);
     }
+  
+    NRF_LOG_INFO("DEVICEID0: %08X", NRF_FICR->DEVICEID[0]);
+    NRF_LOG_INFO("DEVICEID1: %08X", NRF_FICR->DEVICEID[1]);
 
     advertising_start();
     //while (nrf_gpio_pin_read(ADS_DRDY_PIN) == 0)
@@ -944,20 +863,37 @@ int main(void)
 */
       adc_value = AdsGetData();
 
-      LPFilter_put(&filter, adc_value);
-      filter_out = LPFilter_get(&filter);
-      //filter_out = adc_value;
-      ma += filter_out;
-      ma -= data[pointer];
-      data[pointer] = filter_out;
-      pointer++;
-      pointer %= 1024;
+      // Passes through the HP filter
+      hp_out = hp_num[0] * adc_value + 
+               hp_num[1] * num_d[0] + 
+               hp_num[2] * num_d[1] -
+               hp_den[0] * den_d[0] -
+               hp_den[1] * den_d[1];
+      num_d[1] = num_d[0];
+      num_d[0] = adc_value;
+      den_d[1] = den_d[0];
+      den_d[0] = hp_out;
 
-      ecg_data = filter_out - (ma >> 10);
+      LPFilter_put(&filter, hp_out);
+      ecg_data = LPFilter_get(&filter);
+
+      if (ecg_control & 0x200) {
+        filter_enable = false;
+      } else {
+        filter_enable = true;
+      }
+      
       if (ecg_control & 0x1) {
-        if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
-          NRF_LOG_WARNING("ADS Buffer Overflow!");
-          NRF_LOG_FLUSH();
+        if (filter_enable) {
+          if(CIRC_GBUF_PUSH(ADSBUFFER,&ecg_data)){
+           NRF_LOG_ERROR("ADS Buffer Overflow!");
+           NRF_LOG_FLUSH();
+        }
+        } else {
+          if(CIRC_GBUF_PUSH(ADSBUFFER,&adc_value)){
+            NRF_LOG_ERROR("ADS Buffer Overflow!");
+           NRF_LOG_FLUSH();
+        }
         }
       } 
         
