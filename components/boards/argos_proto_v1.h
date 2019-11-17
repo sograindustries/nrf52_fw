@@ -47,9 +47,9 @@ extern "C" {
 
 #define BSP_BUTTON_0   BUTTON_1
 
-#define ADS_MISO_PIN   3 
+#define ADS_MISO_PIN   7 
 #define ADS_CSN_PIN    16 
-#define ADS_MOSI_PIN   7 
+#define ADS_MOSI_PIN   3 
 #define ADS_SCK_PIN    4 
 #define ADS_RST_PIN    9
 #define ADS_DRDY_PIN   8

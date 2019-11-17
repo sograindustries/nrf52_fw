@@ -130,7 +130,7 @@
     <configuration
       Name="Release"
       batch_build_configurations="Release"
-      c_preprocessor_definitions="COMMIT_HASH=$(EXT_COMMIT_HASH:&quot;NOT_A_CI_BUILD&quot;)"
+      c_preprocessor_definitions="COMMIT_HASH=$(EXT_COMMIT_HASH:&quot;NOT_A_CI_BUILD&quot;);DEBUG;CONFIG_NFCT_PINS_AS_GPIOS"
       c_user_include_directories=".;../../../components/ble/ble_services/ble_ecg;../../../lib/fir_filter;../../../" />
   </project>
   <configuration
