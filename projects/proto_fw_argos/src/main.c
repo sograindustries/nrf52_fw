@@ -796,10 +796,10 @@ int main(void)
     nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(0);  /**< SPI instance. */
 
     // HP IIR Filter Definition
-    float hp_num[3] = {0.99835013, -1.99670027,  0.99835013};
-    float hp_den[2] = {-1.99692777,  0.99693255};
-    int num_d[2] = {0, 0};
-    int den_d[2] = {0, 0};
+    float hp_num[5] = {0.98371517, -3.9348607 ,  5.90229104, -3.9348607 ,  0.98371517};
+    float hp_den[4] = {-3.9671626 ,  5.90202586, -3.90255878,  0.96769554};
+    int num_d[4] = {0, 0, 0 ,0};
+    int den_d[4] = {0, 0, 0, 0};
     int hp_out;
     
     // Initialize.
@@ -886,11 +886,19 @@ int main(void)
       // Passes through the HP filter
       hp_out = hp_num[0] * adc_value + 
                hp_num[1] * num_d[0] + 
-               hp_num[2] * num_d[1] -
+               hp_num[2] * num_d[1] +
+               hp_num[3] * num_d[2] +
+               hp_num[4] * num_d[3] -
                hp_den[0] * den_d[0] -
-               hp_den[1] * den_d[1];
+               hp_den[1] * den_d[1] -
+               hp_den[2] * den_d[2] -
+               hp_den[3] * den_d[3];
+      num_d[3] = num_d[2];
+      num_d[2] = num_d[1];
       num_d[1] = num_d[0];
       num_d[0] = adc_value;
+      den_d[3] = den_d[2];
+      den_d[2] = den_d[1];
       den_d[1] = den_d[0];
       den_d[0] = hp_out;
 
