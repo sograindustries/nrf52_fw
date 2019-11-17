@@ -203,7 +203,7 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
     uint32_t status = 0;
     int timer_count_size = sizeof(timer_count);
     bool update;
-    int call_count = 0;
+    static int call_count = 0;
 
 
     static uint32_t packet_count =0;
@@ -273,7 +273,7 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
             }
             // TODO(andy) Double check this number.
             call_count++;
-            call_count %= 15;
+            call_count %= 6;
             break;
         default:
             //Do nothing.
