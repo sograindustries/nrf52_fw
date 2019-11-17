@@ -271,15 +271,15 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
               NRF_LOG_DEBUG("Size: %d", sizeof(ble_arrhythmia));
               ble_ecg_arrhythmia_send(&m_nus, &ble_arrhythmia, &ble_arrhythmia_size, m_conn_handle);
             }
-
+            // Some functions are only called every 120ms (e.g. every 6th time through this function).
+            call_count++;
+            call_count %= 6;
             break;
         default:
             //Do nothing.
             break;
     }
-    // Some functions are only called every 120ms (e.g. every 6th time through this function).
-    call_count++;
-    call_count %= 6;
+
 }
 
 
