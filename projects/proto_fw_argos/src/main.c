@@ -203,6 +203,8 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
     uint32_t status = 0;
     int timer_count_size = sizeof(timer_count);
     bool update;
+    int call_count = 0;
+
 
     static uint32_t packet_count =0;
     uint32_t * data_array_ptr;
@@ -227,16 +229,31 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
             if (ecg_control & 0x1) {
               switch ((ecg_control >> 1) & 0x3) {
                 case 0:
-                  get_ramp(data_array_ptr, kNumSamples);
+                  if (call_count == 0) {
+                    get_ramp(data_array_ptr, kNumSamples);
+                    update = true;
+                  } else {
+                    update = false;
+                  }
                   break;
                 case 1:
                   update = get_ads_data(data_array_ptr, kNumSamples);
                   break;
                 case 2:
-                  get_mock_normal_adc(data_array_ptr, kNumSamples);
+                  if (call_count == 0) {
+                    get_mock_normal_adc(data_array_ptr, kNumSamples);
+                    update = true;
+                  } else {
+                    update = false;
+                  }
                   break;
                 case 3:
-                  get_constant(data_array_ptr, kNumSamples, 1);
+                  if (call_count == 0) {
+                    get_constant(data_array_ptr, kNumSamples, 1);
+                    update = true;
+                  } else {
+                    update = false;
+                  }
                   break;
                 default:
                   break;
@@ -260,6 +277,9 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
             //Do nothing.
             break;
     }
+    // Some functions are only called every 120ms (e.g. every 6th time through this function).
+    call_count++;
+    call_count %= 6;
 }
 
 
