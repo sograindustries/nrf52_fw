@@ -1,7 +1,7 @@
 #ifndef LPFILTER_H_
 #define LPFILTER_H_
 
-#define LPFILTER_TAP_NUM 210
+#define LPFILTER_TAP_NUM 176
 
 typedef struct {
   int history[LPFILTER_TAP_NUM];

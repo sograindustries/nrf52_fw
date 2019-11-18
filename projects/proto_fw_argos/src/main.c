@@ -796,11 +796,14 @@ int main(void)
     nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(0);  /**< SPI instance. */
 
     // HP IIR Filter Definition
-    float hp_num[3] = {0.99835013, -1.99670027,  0.99835013};
-    float hp_den[2] = {-1.99692777,  0.99693255};
-    int num_d[2] = {0, 0};
-    int den_d[2] = {0, 0};
-    int hp_out;
+    double hp_num[3] = {0.991153595101663,
+                        -1.982307190203326,
+                        0.991153595101663};
+    double hp_den[2] = {-1.982228929792528,
+                        0.9823854506141251};
+    double num_d[2] = {0, 0};
+    double den_d[2] = {0, 0};
+    double hp_out;
     
     // Initialize.
     sd_power_gpregret_clr(0, 0xff); 
